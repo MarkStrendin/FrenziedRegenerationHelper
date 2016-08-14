@@ -45,6 +45,9 @@ local frameInitialized = false
 -- Calculated bonus from Wild Flesh
 local bonusHealing_WildFlesh = 0
 
+-- We want to disable the bulk of this addon's calculating if the player is in a different spec
+local meterRunning = false
+
 -- ----------------------------------------------
 -- General housekeeping functions
 -- ----------------------------------------------
@@ -78,6 +81,23 @@ local function FormatNumber(n)
 	return left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())..right
 end
 
+-- Is Frenzied Regeneration available to the player in this spec, or at this level?
+local function CanPlayerUseFrenziedRegen() 
+	if (IsPlayerSpell(22842)) then
+		return true
+	else
+		return false
+	end
+end
+
+local function CheckIfPlayerCanUseFrenziedRegen() 
+		if (CanPlayerUseFrenziedRegen()) then
+			meterRunning = true
+		else
+			meterRunning = false
+		end
+end		
+
 -- ----------------------------------------------
 -- If the player is not a druid, stop loading the addon
 -- ----------------------------------------------
@@ -102,6 +122,10 @@ DamageInLastFiveFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 -- Hook the combat log
 DamageInLastFiveFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
+-- When the player changes talent specs
+DamageInLastFiveFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+
+
 
 -- ----------------------------------------------
 -- Event handlers
@@ -116,11 +140,17 @@ local function Handler_Shapeshift()
 
 	if (hideOutsideBearForm) then
 		if (GetShapeshiftForm() == bearFormID) then
-			ShowMainWindow()
+			if (CanPlayerUseFrenziedRegen()) then
+				ShowMainWindow()
+			end
 		else
 			HideMainWindow()
 		end	
 	end
+end
+
+local function Handler_ChangeTalentSpec() 
+	CheckIfPlayerCanUseFrenziedRegen()
 end
 
 -- ----------------------------------------------
@@ -133,6 +163,8 @@ local function InitWindow()
 	if (frh_WildFleshBonus == nil) then
 		frh_WildFleshBonus = 0;
 	end
+
+	CheckIfPlayerCanUseFrenziedRegen()
 
 	-- Load any saved variables
 	bonusHealing_WildFlesh = frh_WildFleshBonus
@@ -307,6 +339,8 @@ local function debug_DisplayDamageTable()
 	end
 end
 
+
+
 -- ----------------------------------------------
 -- This runs every second, apparently
 -- ----------------------------------------------
@@ -322,14 +356,17 @@ local function onFrameUpdate(self, elapsed)
 		if (frameInitialized == true) then
 			-- Stuff to run every second goes here
 
-			CycleDamageTable()
-			UpdateTotalDisplay()
-			CalculateWildFleshBonus()
+			if (meterRunning == true) then
+				CycleDamageTable()
+				UpdateTotalDisplay()
+				CalculateWildFleshBonus()
 
-			if (showDebugMessages == true) then
-				debug_DisplayDamageTable()
-			end
+				if (showDebugMessages == true) then
+					debug_DisplayDamageTable()
+				end
+			end			
 		end
+
 	end
 end
 
@@ -348,6 +385,9 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 	elseif (event == "UPDATE_SHAPESHIFT_FORM") then
 		-- This gets called constantly in combat, and I'm not sure why
 		Handler_Shapeshift()
+
+	elseif (event == "ACTIVE_TALENT_GROUP_CHANGED") then
+		Handler_ChangeTalentSpec()
 
 	elseif (event == "COMBAT_LOG_EVENT_UNFILTERED") then
 		-- http://wowwiki.wikia.com/wiki/API_COMBAT_LOG_EVENT
