@@ -177,8 +177,16 @@ end
 -- Frenzied Regen Bonus calculating logic
 -- ----------------------------------------------
 
-local function GetFrenziedRegenHealingMultiplier() 
-	return (1.00 + bonusHealing_WildFlesh)
+local function GetGuardianOfEluneBonus() 
+	if (UnitBuff("player", "Guardian of Elune") ~= nil) then
+		return 0.20
+	else
+		return 0
+	end
+end
+
+local function GetAdjustedFRHealingAmount(baseAmount) 
+	return baseAmount * (1 + bonusHealing_WildFlesh + GetGuardianOfEluneBonus())
 end
 
 -- ----------------------------------------------
@@ -272,7 +280,7 @@ local function  UpdateTotalDisplay()
 	end
 
 	-- Take into account any bonuses to FR healing
-	displayAmount = displayAmount * GetFrenziedRegenHealingMultiplier()
+	displayAmount = GetAdjustedFRHealingAmount(displayAmount)
 
 	DisplayWindow.text:SetText(FormatNumber(displayAmount))
 
