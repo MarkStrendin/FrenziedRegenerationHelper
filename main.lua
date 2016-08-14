@@ -1,4 +1,3 @@
-
 -- ----------------------------------------------
 -- Configuration
 -- ----------------------------------------------
@@ -13,10 +12,7 @@ local minimumHealMultiplier = 0.05
 local frHealingMultiplier = 1
 
 -- Show debug messages?
-local showDebugMessages = false
-
--- How long is the interval between updates? (default is 5 seconds)
-local secondsInInterval = 5
+local showDebugMessages = true
 
 -- Should we hide the window if the player isn't in bear form?
 local hideOutsideBearForm = true
@@ -24,6 +20,12 @@ local hideOutsideBearForm = true
 -- ----------------------------------------------
 -- You shouldn't need to touch anything past here
 -- ----------------------------------------------
+
+-- How many seconds does frenzied regeneration go back? (default: 5)
+local frenziedRegenSeconds = 5
+
+-- How many seconds back should we keep in the table?
+local damageTableMaxEntries = 5 -- If this value is 1 or lower, this addon will crash
 
 -- What is the stance number of bear form
 local bearFormID = 1
@@ -37,12 +39,18 @@ local windowVisible = false
 -- Currently not used, but I think I will use this in the future for something
 local isPlayerInCombat = false
 
+-- Create a table to store the past 1 second of damage taken
+-- We will keep each second seperate, and prune off anything beyond 5 periodically
+-- When we display the numbers, we'll display 
+local TrackedDamageTable = {}
+local damageTrackedSinceLastInterval = 0
+local damageTrackingTableInitialized = false
 
 -- ----------------------------------------------
 -- General housekeeping functions
 -- ----------------------------------------------
 
-local function ShowDebug(msg)
+local function ShowDebugMessage(msg)
 	if (showDebugMessages == true) then
 		print(addonName.."-DEBUG: "..msg)
 	end
@@ -109,7 +117,6 @@ DamageInLastFiveFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
 local function Handler_PlayerLeaveCombat() 
 	isPlayerInCombat = false
-
 end
 
 local function Handler_PlayerEnterCombat()
@@ -130,10 +137,7 @@ local function Handler_Shapeshift()
 			HideMainWindow()
 		end	
 	end
-
-
 end
-
 
 -- ----------------------------------------------
 -- Window initialization logic
@@ -141,7 +145,7 @@ end
 
 local function InitWindow()
 	-- Handle this in XML maybe?
-	ShowDebug("Trying to create window...")
+	ShowDebugMessage("Trying to create window...")
 	DisplayWindow = CreateFrame("Frame", "containerFrame" ,UIParent)
 	DisplayWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=4,insets={left=0.5,right=0.5,top=0.5,bottom=0.5}})
 	DisplayWindow:SetSize(200, 22)
@@ -152,7 +156,7 @@ local function InitWindow()
 	-- Here's a list of fonts http://wow.gamepedia.com/API_FontInstance_SetFontObject
 	DisplayWindow.text = DisplayWindow:CreateFontString("displayString", "BACKGROUND", "GameFontHighlight")
 	DisplayWindow.text:SetAllPoints()
-	DisplayWindow.text:SetText("Damage in last "..secondsInInterval.."s")
+	DisplayWindow.text:SetText("Damage in last "..frenziedRegenSeconds.."s")
 	DisplayWindow.text:SetPoint("CENTER", 0, 0)
 
 	-- Allow the window to be moved and handle the window being dragged
@@ -180,17 +184,47 @@ end
 -- Damage tracking logic
 -- ----------------------------------------------
 
-local TrackedDamageAmount = 0
-local function ResetTrackedDamage() 
-	ShowDebug("Damage in last 5 seconds was: "..TrackedDamageAmount)
-	TrackedDamageAmount = 0
+local function InitializeDamageTable()
+	for x=1,damageTableMaxEntries,1 do		
+
+		ShowDebugMessage("Damage table "..x.." initialized to 0")
+		TrackedDamageTable[x] = 0
+	end
+	damageTrackingTableInitialized = true
+end
+
+-- should be called every second, this keeps the damage table up to date for the UI functions
+local function CycleDamageTable() 
+	-- Create a new working table
+	local workingDamageTable = {}
+
+	-- The current up to date value goes in slot 1
+	workingDamageTable[1] = damageTrackedSinceLastInterval
+	damageTrackedSinceLastInterval = 0
+
+	-- All other slots are the values from the "active" damage table, shifted down one interval
+
+	for x=2,damageTableMaxEntries,1 do	
+		workingDamageTable[x] = TrackedDamageTable[x-1]
+	end
+
+	-- Assign our working table to the "active" table, which should dispose of the old values during garbage collection
+	TrackedDamageTable = workingDamageTable
+end
+
+local function GetDamageTableTotal() 
+	totalDamage = 0
+	for x=1,frenziedRegenSeconds,1 do	
+		totalDamage = totalDamage + TrackedDamageTable[x]
+	end
+	return  totalDamage
 end
 
 local function  UpdateTotalDisplay() 
 	local displayAmount = 0
 
 	-- Calculate the amount that would be healed from damage taken
-	local amountHealedFromDamage = TrackedDamageAmount * frDamagedHealed
+	local amountHealedFromDamage = GetDamageTableTotal() * frDamagedHealed
 
 	-- Calculate the minimum amount FR will heal (5% of the players max health)
 	local minimumHealAmount = UnitHealthMax("player") * minimumHealMultiplier
@@ -202,28 +236,54 @@ local function  UpdateTotalDisplay()
 		displayAmount = minimumHealAmount
 	end
 
+	-- Take into account any bonuses to FR healing
+	displayAmount = displayAmount * frHealingMultiplier
+
 	DisplayWindow.text:SetText(FormatNumber(displayAmount))
 
-	ResetTrackedDamage()
 end	
 
-
 local function TrackDamage(dmg)
-	TrackedDamageAmount = TrackedDamageAmount + dmg
+	damageTrackedSinceLastInterval = damageTrackedSinceLastInterval + dmg
 end
 
+-- ----------------------------------------------
+-- Debug stuff
+-- ----------------------------------------------
+
+local arbitraryCounter = 0
+local function debug_DisplayDamageTable() 
+	if (damageTrackingTableInitialized == true) then
+		arbitraryCounter = arbitraryCounter + 1
+		ShowDebugMessage("------------------------ ".. arbitraryCounter)
+		ShowDebugMessage("Damage table: ")
+		for x=1,damageTableMaxEntries,1 do		
+			ShowDebugMessage(" "..x..": "..TrackedDamageTable[x])
+		end
+		ShowDebugMessage(" Total damage: "..GetDamageTableTotal())
+	end
+end
 
 -- ----------------------------------------------
 -- This runs every second, apparently
--- Use this to run the update every X seconds
 -- ----------------------------------------------
 
-local total = 0
-local function onFrameUpdate(self, elapsed)
-	total = total + elapsed
-	if (total >= secondsInInterval) then
+local totalElapsedSeconds = 0
+local function onFrameUpdate(self, elapsed)	
+
+	-- Utilize the onFrameUpdate event to create a 1 second timer
+	totalElapsedSeconds = totalElapsedSeconds + elapsed
+	if (totalElapsedSeconds >= 1) then
+		totalElapsedSeconds = 0
+
+		-- Stuff to run every second goes here
+		CycleDamageTable()
 		UpdateTotalDisplay()
-		total = 0
+
+		if (showDebugMessages == true) then
+			debug_DisplayDamageTable()
+		end
+
 	end
 end
 
@@ -234,6 +294,7 @@ end
 local function MainEventHandler(self, event, arg1, eventType, ...)
 	if (event == "ADDON_LOADED" and arg1 == addonName) then
 			ShowMessage("|cff3399FF"..addonName.."|r loaded. Window will appear in bear form.")
+			InitializeDamageTable()
 			InitWindow()
 		elseif (event == "PLAYER_REGEN_ENABLED") then
 			Handler_PlayerLeaveCombat()
