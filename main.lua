@@ -51,12 +51,12 @@ local bonusHealing_WildFlesh = 0
 
 local function ShowDebugMessage(msg)
 	if (showDebugMessages == true) then
-		print(addonName.."-DEBUG: "..msg)
+	print("|cff3399FF"..addonName.."-DEBUG|r: "..msg)
 	end
 end
 
 local function ShowMessage(msg) 
-	print(msg)
+	print("|cff3399FF"..addonName.."|r: "..msg)
 end
 
 local function HideMainWindow()
@@ -83,7 +83,7 @@ end
 -- ----------------------------------------------
 
 if select(2, UnitClass("player")) ~= "DRUID" then
-	ShowMessage("Not loading |cff3399FF"..addonName.."|r, as player is not a druid")
+	ShowMessage("Will stop loading, as player is not a druid")
 	return
 end
 
@@ -128,7 +128,6 @@ end
 -- ----------------------------------------------
 
 local function InitWindow()
-	ShowMessage("Init window")
 
 	-- Load some variables
 	if (frh_WildFleshBonus == nil) then
@@ -333,7 +332,7 @@ end
 local function MainEventHandler(self, event, arg1, eventType, ...)
 	if (event == "ADDON_LOADED") then
 		if (string.lower(arg1) == string.lower(addonName)) then
-			ShowMessage("|cff3399FF"..addonName.."|r loaded. Window will appear in bear form.")
+			ShowMessage("Loaded - Window will appear in bear form.")
 			InitializeDamageTable()
 			InitWindow()
 		end
