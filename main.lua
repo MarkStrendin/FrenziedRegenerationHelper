@@ -12,7 +12,7 @@ local minimumHealMultiplier = 0.05
 local frHealingMultiplier = 1
 
 -- Show debug messages?
-local showDebugMessages = true
+local showDebugMessages = false
 
 -- Should we hide the window if the player isn't in bear form?
 local hideOutsideBearForm = true
