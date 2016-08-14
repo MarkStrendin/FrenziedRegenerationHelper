@@ -1,0 +1,7 @@
+## Interface: 70000
+## Title: FrenziedRegenerationHelper
+## Notes: Small movable window that displays how much damage you've taken in the last 5 seconds (For Frenzied regeneration)
+## Author: Mark Strendin
+## Version: 1.0
+
+main.lua
