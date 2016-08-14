@@ -35,16 +35,15 @@ local addonName = "FrenziedRegenerationHelper"
 
 local windowVisible = false
 
--- Track if the player is in combat or not
--- Currently not used, but I think I will use this in the future for something
-local isPlayerInCombat = false
-
 -- Create a table to store the past 1 second of damage taken
 -- We will keep each second seperate, and prune off anything beyond 5 periodically
 -- When we display the numbers, we'll display 
 local TrackedDamageTable = {}
 local damageTrackedSinceLastInterval = 0
 local damageTrackingTableInitialized = false
+
+-- Is the addon window initialized?
+local frameInitialized = false
 
 -- ----------------------------------------------
 -- General housekeeping functions
@@ -79,7 +78,6 @@ local function FormatNumber(n)
 	return left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())..right
 end
 
-
 -- ----------------------------------------------
 -- If the player is not a druid, stop loading the addon
 -- ----------------------------------------------
@@ -98,12 +96,6 @@ local DamageInLastFiveFrame = CreateFrame("FRAME")
 -- Event for when the addon is loaded, so we can print a message indicating such
 DamageInLastFiveFrame:RegisterEvent("ADDON_LOADED")
 
--- Event for if the player leaves combat
-DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-
--- Event for if the player enters combat
-DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
-
 -- Event for if the player switches forms - we only need to display the window in bear form
 DamageInLastFiveFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 
@@ -114,14 +106,6 @@ DamageInLastFiveFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 -- ----------------------------------------------
 -- Event handlers
 -- ----------------------------------------------
-
-local function Handler_PlayerLeaveCombat() 
-	isPlayerInCombat = false
-end
-
-local function Handler_PlayerEnterCombat()
-	isPlayerInCombat = true
-end
 
 local function Handler_PlayerDamaged(amount)
 	ShowMessage(amount)
@@ -143,7 +127,10 @@ end
 -- Window initialization logic
 -- ----------------------------------------------
 
+
 local function InitWindow()
+	ShowMessage("Init window")
+
 	-- Handle this in XML maybe?
 	ShowDebugMessage("Trying to create window...")
 	DisplayWindow = CreateFrame("Frame", "containerFrame" ,UIParent)
@@ -178,6 +165,7 @@ local function InitWindow()
 		end	
 	end
 
+	frameInitialized = true
 end
 
 -- ----------------------------------------------
@@ -276,14 +264,16 @@ local function onFrameUpdate(self, elapsed)
 	if (totalElapsedSeconds >= 1) then
 		totalElapsedSeconds = 0
 
-		-- Stuff to run every second goes here
-		CycleDamageTable()
-		UpdateTotalDisplay()
+		if (frameInitialized == true) then
+			-- Stuff to run every second goes here
 
-		if (showDebugMessages == true) then
-			debug_DisplayDamageTable()
+			CycleDamageTable()
+			UpdateTotalDisplay()
+
+			if (showDebugMessages == true) then
+				debug_DisplayDamageTable()
+			end
 		end
-
 	end
 end
 
@@ -292,55 +282,50 @@ end
 -- ----------------------------------------------
 
 local function MainEventHandler(self, event, arg1, eventType, ...)
-	if (event == "ADDON_LOADED" and arg1 == addonName) then
+	if (event == "ADDON_LOADED") then
+		if (string.lower(arg1) == string.lower(addonName)) then
 			ShowMessage("|cff3399FF"..addonName.."|r loaded. Window will appear in bear form.")
 			InitializeDamageTable()
 			InitWindow()
-		elseif (event == "PLAYER_REGEN_ENABLED") then
-			Handler_PlayerLeaveCombat()
-
-		elseif (event == "PLAYER_REGEN_DISABLED") then
-			Handler_PlayerEnterCombat()
-			UpdateTotalDisplay()
-
-		elseif (event == "UPDATE_SHAPESHIFT_FORM") then
-			-- This gets called constantly in combat, and I'm not sure why
-			Handler_Shapeshift()
-
-		elseif (event == "COMBAT_LOG_EVENT_UNFILTERED") then
-			-- http://wowwiki.wikia.com/wiki/API_COMBAT_LOG_EVENT
-
-			local unixtime = arg1
-			local sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = select(2,...)
-			
-			-- We only care about damage IN, so only continue if the destination is the player
-			if (destGUID == UnitGUID("player")) then
-
-				-- We only care about events that would DAMAGE the player (as opposed to heals, auras coming and going, interrupts, etc)
-				if (eventType == "SPELL_DAMAGE" or eventType == "SPELL_PERIODIC_DAMAGE" or eventType == "SWING_DAMAGE" or eventType == "ENVIRONMENTAL_DAMAGE") then
-
-					-- The amount of damage is a different parameter depending on what kind of (sub) event it is
-					local amount = 0
-
-					if (eventType == "SWING_DAMAGE") then
-						amount = select(10,...)
-					end
-
-					if (eventType == "ENVIRONMENTAL_DAMAGE") then
-						amount = select(11,...)
-					end
-
-					if (eventType == "SPELL_DAMAGE" or arg2 == "SPELL_PERIODIC_DAMAGE") then
-						amount = select(13,...)
-					end
-
-					TrackDamage(amount)
-				end
-			end
-
 		end
-end
 
+	elseif (event == "UPDATE_SHAPESHIFT_FORM") then
+		-- This gets called constantly in combat, and I'm not sure why
+		Handler_Shapeshift()
+
+	elseif (event == "COMBAT_LOG_EVENT_UNFILTERED") then
+		-- http://wowwiki.wikia.com/wiki/API_COMBAT_LOG_EVENT
+
+		local unixtime = arg1
+		local sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = select(2,...)
+		
+		-- We only care about damage IN, so only continue if the destination is the player
+		if (destGUID == UnitGUID("player")) then
+
+			-- We only care about events that would DAMAGE the player (as opposed to heals, auras coming and going, interrupts, etc)
+			if (eventType == "SPELL_DAMAGE" or eventType == "SPELL_PERIODIC_DAMAGE" or eventType == "SWING_DAMAGE" or eventType == "ENVIRONMENTAL_DAMAGE") then
+
+				-- The amount of damage is a different parameter depending on what kind of (sub) event it is
+				local amount = 0
+
+				if (eventType == "SWING_DAMAGE") then
+					amount = select(10,...)
+				end
+
+				if (eventType == "ENVIRONMENTAL_DAMAGE") then
+					amount = select(11,...)
+				end
+
+				if (eventType == "SPELL_DAMAGE" or arg2 == "SPELL_PERIODIC_DAMAGE") then
+					amount = select(13,...)
+				end
+
+				TrackDamage(amount)
+			end
+		end
+
+	end
+end
 
 -- ----------------------------------------------
 -- Register event handlers
