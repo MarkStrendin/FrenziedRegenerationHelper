@@ -8,9 +8,6 @@ local frDamagedHealed = 0.5
 -- How much of the player's health is the minimum heal? (detault is 5%)
 local minimumHealMultiplier = 0.05
 
--- Any bonuses to FR, such as the artifact talent "Wildflesh"
-local frHealingMultiplier = 1
-
 -- Show debug messages?
 local showDebugMessages = false
 
@@ -44,6 +41,9 @@ local damageTrackingTableInitialized = false
 
 -- Is the addon window initialized?
 local frameInitialized = false
+
+-- Calculated bonus from Wild Flesh
+local bonusHealing_WildFlesh = 0
 
 -- ----------------------------------------------
 -- General housekeeping functions
@@ -127,11 +127,17 @@ end
 -- Window initialization logic
 -- ----------------------------------------------
 
-
 local function InitWindow()
 	ShowMessage("Init window")
 
-	-- Handle this in XML maybe?
+	-- Load some variables
+	if (frh_WildFleshBonus == nil) then
+		frh_WildFleshBonus = 0;
+	end
+
+	-- Load any saved variables
+	bonusHealing_WildFlesh = frh_WildFleshBonus
+
 	ShowDebugMessage("Trying to create window...")
 	DisplayWindow = CreateFrame("Frame", "containerFrame" ,UIParent)
 	DisplayWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=4,insets={left=0.5,right=0.5,top=0.5,bottom=0.5}})
@@ -169,6 +175,47 @@ local function InitWindow()
 end
 
 -- ----------------------------------------------
+-- Frenzied Regen Bonus calculating logic
+-- ----------------------------------------------
+
+local function GetFrenziedRegenHealingMultiplier() 
+	return (1.00 + bonusHealing_WildFlesh)
+end
+
+-- ----------------------------------------------
+-- Artifact querying logic
+-- ----------------------------------------------
+
+local function UpdateWildFleshBonus(bonus) 
+	if (bonus ~= bonusHealing_WildFlesh) then
+		bonusHealing_WildFlesh = bonus
+		frh_WildFleshBonus = bonusHealing_WildFlesh
+
+		ShowMessage("Updated known bonus from Claws of Ursoc to "..(bonus*100).."%");
+	end
+end
+
+-- This gets called every second ... until I find a better way to do it
+local function CalculateWildFleshBonus() 
+	-- If the player doesn't have Claws of Ursoc equipped, then theres no bonus from it
+	if (IsEquippedItem("Claws of Ursoc") == true) then
+
+		-- Attempt to load the artifact powers. Currently this only works if the artifact UI is open
+		local powers = C_ArtifactUI.GetPowers()
+
+		if (powers) then
+			for i = 1, #powers do
+		        local spellID, _, currentRank = C_ArtifactUI.GetPowerInfo(powers[i])
+		     	
+		     	if (spellID == 200400) then
+					UpdateWildFleshBonus(0.05 * currentRank)
+		     	end
+		    end
+		end
+	end
+end
+
+-- ----------------------------------------------
 -- Damage tracking logic
 -- ----------------------------------------------
 
@@ -183,6 +230,7 @@ end
 
 -- should be called every second, this keeps the damage table up to date for the UI functions
 local function CycleDamageTable() 
+
 	-- Create a new working table
 	local workingDamageTable = {}
 
@@ -212,7 +260,7 @@ local function  UpdateTotalDisplay()
 	local displayAmount = 0
 
 	-- Calculate the amount that would be healed from damage taken
-	local amountHealedFromDamage = GetDamageTableTotal() * frDamagedHealed
+	local amountHealedFromDamage = (GetDamageTableTotal() * frDamagedHealed)
 
 	-- Calculate the minimum amount FR will heal (5% of the players max health)
 	local minimumHealAmount = UnitHealthMax("player") * minimumHealMultiplier
@@ -225,7 +273,7 @@ local function  UpdateTotalDisplay()
 	end
 
 	-- Take into account any bonuses to FR healing
-	displayAmount = displayAmount * frHealingMultiplier
+	displayAmount = displayAmount * GetFrenziedRegenHealingMultiplier()
 
 	DisplayWindow.text:SetText(FormatNumber(displayAmount))
 
@@ -269,6 +317,7 @@ local function onFrameUpdate(self, elapsed)
 
 			CycleDamageTable()
 			UpdateTotalDisplay()
+			CalculateWildFleshBonus()
 
 			if (showDebugMessages == true) then
 				debug_DisplayDamageTable()
