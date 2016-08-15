@@ -54,6 +54,9 @@ local meterRunning = false
 
 local isPlayerInCombat = false
 
+-- Store the version of the addon, from the .toc file, so we can display it
+local addonVersion = GetAddOnMetadata(addonName, "Version")
+
 -- ----------------------------------------------
 -- General housekeeping functions
 -- ----------------------------------------------
@@ -397,11 +400,10 @@ end
 -- ----------------------------------------------
 -- Main event handler that passes stuff off to other handler functions
 -- ----------------------------------------------
-
 local function MainEventHandler(self, event, arg1, eventType, ...)
 	if (event == "ADDON_LOADED") then
 		if (string.lower(arg1) == string.lower(addonName)) then
-			ShowMessage("Loaded - Window will appear in bear form.")
+			ShowMessage("Version "..addonVersion.." loaded - Window will appear in bear form.")
 			InitializeDamageTable()
 			InitWindow()
 		end
