@@ -18,6 +18,10 @@ local hideOutsideBearForm = true
 -- You shouldn't need to touch anything past here
 -- ----------------------------------------------
 
+-- Should environmental damage count?
+-- Currently, frenzied regeneration doesn't count it, but I'm not sure if this is intentional or not.
+local include_environmental_damage = false
+
 -- How many seconds does frenzied regeneration go back? (default: 5)
 local frenziedRegenSeconds = 5
 
@@ -409,14 +413,18 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 				end
 
 				if (eventType == "ENVIRONMENTAL_DAMAGE") then
-					amount = select(11,...)
+					if (include_environmental_damage == true) then
+						amount = select(11,...)
+					end
 				end
 
 				if (eventType == "SPELL_DAMAGE" or arg2 == "SPELL_PERIODIC_DAMAGE") then
 					amount = select(13,...)
 				end
 
-				TrackDamage(amount)
+				if (amount > 0) then
+					TrackDamage(amount)
+				end
 			end
 		end
 
