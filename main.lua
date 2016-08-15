@@ -166,15 +166,17 @@ local function Handler_ChangeTalentSpec()
 	CheckIfPlayerCanUseFrenziedRegen()
 end
 
-
 -- Player has left combat
 local function Handler_PlayerRegenEnabled() 
-	CheckIfPlayerCanUseFrenziedRegen()
+	isPlayerInCombat = false
 end
 
 -- Player has entered combat
 local function Handler_PlayerRegenDisabled() 
-	CheckIfPlayerCanUseFrenziedRegen()
+	isPlayerInCombat = true
+	if (meterRunning == false) then
+		CheckIfPlayerCanUseFrenziedRegen()
+	end
 end
 
 -- ----------------------------------------------
@@ -187,8 +189,6 @@ local function InitWindow()
 	if (frh_WildFleshBonus == nil) then
 		frh_WildFleshBonus = 0;
 	end
-
-	CheckIfPlayerCanUseFrenziedRegen()
 
 	-- Load any saved variables
 	bonusHealing_WildFlesh = frh_WildFleshBonus
