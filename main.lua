@@ -52,6 +52,8 @@ local bonusHealing_WildFlesh = 0
 -- We want to disable the bulk of this addon's calculating if the player is in a different spec
 local meterRunning = false
 
+local isPlayerInCombat = false
+
 -- ----------------------------------------------
 -- General housekeeping functions
 -- ----------------------------------------------
@@ -86,6 +88,7 @@ local function FormatNumber(n)
 end
 
 -- Is Frenzied Regeneration available to the player in this spec, or at this level?
+-- Note: This will fail to detect the spell if the player has just logged in.
 local function CanPlayerUseFrenziedRegen() 
 	if (IsPlayerSpell(22842)) then
 		return true
@@ -94,7 +97,7 @@ local function CanPlayerUseFrenziedRegen()
 	end
 end
 
-local function CheckIfPlayerCanUseFrenziedRegen() 
+local function CheckIfPlayerCanUseFrenziedRegen()
 		if (CanPlayerUseFrenziedRegen()) then
 			meterRunning = true
 		else
@@ -129,6 +132,10 @@ DamageInLastFiveFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 -- When the player changes talent specs
 DamageInLastFiveFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
 
+-- Track if the player is in combat or not
+DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+
 
 
 -- ----------------------------------------------
@@ -139,6 +146,8 @@ local function Handler_PlayerDamaged(amount)
 	ShowMessage(amount)
 end
 
+-- The shapeshift event is fired constantly during combat for some reason, so
+-- this function is going to get called alot of extra times
 local function Handler_Shapeshift() 
 	-- If the player shapeshifts into bear form, show the addon
 
@@ -154,6 +163,17 @@ local function Handler_Shapeshift()
 end
 
 local function Handler_ChangeTalentSpec() 
+	CheckIfPlayerCanUseFrenziedRegen()
+end
+
+
+-- Player has left combat
+local function Handler_PlayerRegenEnabled() 
+	CheckIfPlayerCanUseFrenziedRegen()
+end
+
+-- Player has entered combat
+local function Handler_PlayerRegenDisabled() 
 	CheckIfPlayerCanUseFrenziedRegen()
 end
 
@@ -392,6 +412,12 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 
 	elseif (event == "ACTIVE_TALENT_GROUP_CHANGED") then
 		Handler_ChangeTalentSpec()
+
+	elseif (event == "PLAYER_REGEN_ENABLED") then
+		Handler_PlayerRegenEnabled()
+
+	elseif (event == "PLAYER_REGEN_DISABLED") then
+		Handler_PlayerRegenDisabled()
 
 	elseif (event == "COMBAT_LOG_EVENT_UNFILTERED") then
 		-- http://wowwiki.wikia.com/wiki/API_COMBAT_LOG_EVENT
