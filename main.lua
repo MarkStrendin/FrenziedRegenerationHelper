@@ -244,8 +244,16 @@ local function GetGuardianOfEluneBonus()
 	end
 end
 
+local function GetSkysecsHoldBonus()
+	if (IsEquippedItem("Skysec's Hold") == true) then
+		return UnitHealthMax("player") * 0.15
+	else
+		return 0
+	end
+end
+
 local function GetAdjustedFRHealingAmount(baseAmount) 
-	return baseAmount * (1 + bonusHealing_WildFlesh + GetGuardianOfEluneBonus())
+	return (baseAmount * (1 + bonusHealing_WildFlesh + GetGuardianOfEluneBonus())) + GetSkysecsHoldBonus()
 end
 
 -- ----------------------------------------------
