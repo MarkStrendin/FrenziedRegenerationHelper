@@ -190,7 +190,7 @@ local function InitWindow()
 
 	-- Load some variables
 	if (frh_WildFleshBonus == nil) then
-		frh_WildFleshBonus = 0;
+		frh_WildFleshBonus = 0
 	end
 
 	-- Load any saved variables
@@ -263,7 +263,7 @@ end
 local function UpdateWildFleshBonus(bonus) 
 	-- This seems to fail for some reason if it's comparing numbers, so compare strings intead
 	if (tostring(bonus) ~= tostring(bonusHealing_WildFlesh)) then
-		ShowMessage("Updating known bonus from Claws of Ursoc to "..(bonus*100).."% (was "..(bonusHealing_WildFlesh*100).."%)");
+		ShowMessage("Updating known bonus from Claws of Ursoc to "..(bonus*100).."% (was "..(bonusHealing_WildFlesh*100).."%)")
 		bonusHealing_WildFlesh = bonus
 		frh_WildFleshBonus = bonusHealing_WildFlesh
 	end
@@ -331,7 +331,10 @@ local function GetDamageTableTotal()
 end
 
 local function  UpdateTotalDisplay() 
-	local displayAmount = 0
+	local displayAmount = 0	
+
+	-- Color the text acordingly
+	DisplayWindow.text:SetTextColor(1,1,1, 0.5)
 
 	-- Calculate the amount that would be healed from damage taken
 	local amountHealedFromDamage = (GetDamageTableTotal() * frDamagedHealed)
@@ -339,9 +342,10 @@ local function  UpdateTotalDisplay()
 	-- Calculate the minimum amount FR will heal (5% of the players max health)
 	local minimumHealAmount = UnitHealthMax("player") * minimumHealMultiplier
 
-	-- Figure out which would heal more, and disply that one
+	-- Figure out which would heal more, and display that one
 	if (amountHealedFromDamage > minimumHealAmount) then
 		displayAmount = amountHealedFromDamage
+		DisplayWindow.text:SetTextColor(1,1,1,1)
 	else
 		displayAmount = minimumHealAmount
 	end
