@@ -261,11 +261,11 @@ end
 -- ----------------------------------------------
 
 local function UpdateWildFleshBonus(bonus) 
-	if (bonus ~= bonusHealing_WildFlesh) then
+	-- This seems to fail for some reason if it's comparing numbers, so compare strings intead
+	if (tostring(bonus) ~= tostring(bonusHealing_WildFlesh)) then
+		ShowMessage("Updating known bonus from Claws of Ursoc to "..(bonus*100).."% (was "..(bonusHealing_WildFlesh*100).."%)");
 		bonusHealing_WildFlesh = bonus
 		frh_WildFleshBonus = bonusHealing_WildFlesh
-
-		ShowMessage("Updated known bonus from Claws of Ursoc to "..(bonus*100).."%");
 	end
 end
 
@@ -390,11 +390,12 @@ local function onFrameUpdate(self, elapsed)
 
 		if (frameInitialized == true) then
 			-- Stuff to run every second goes here
+			
+			CalculateWildFleshBonus()
 
 			if (meterRunning == true) then
 				CycleDamageTable()
 				UpdateTotalDisplay()
-				CalculateWildFleshBonus()
 
 				if (showDebugMessages == true) then
 					debug_DisplayDamageTable()
