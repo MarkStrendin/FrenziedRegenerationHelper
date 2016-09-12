@@ -64,14 +64,15 @@ local showDamageType = true
 
 
 -- colors
+-- Orange: rgb(223, 92, 23)
+local color_damagetype_physical_r = 223
+local color_damagetype_physical_g = 92
+local color_damagetype_physical_b = 23
 
-local color_damagetype_physical_r = 255
-local color_damagetype_physical_g = 116
-local color_damagetype_physical_b = 0
-
-local color_damagetype_magical_r = 104
-local color_damagetype_magical_g = 11
-local color_damagetype_magical_b = 171
+-- Cyan rgb(86, 165, 220)
+local color_damagetype_magical_r = 86
+local color_damagetype_magical_g = 165
+local color_damagetype_magical_b = 220
 
 local color_damagetype_dim = 64
 
@@ -253,7 +254,7 @@ local function InitWindow()
 	DamageTypeWindow:SetMinMaxValues(0, 100)
 	DamageTypeWindow:SetValue(100)
 	DamageTypeWindow:SetWidth(200)
-	DamageTypeWindow:SetHeight(3)
+	DamageTypeWindow:SetHeight(2)
 	DamageTypeWindow:SetReverseFill(true)
 	DamageTypeWindow:SetPoint("BOTTOMLEFT",DisplayWindow,"BOTTOMLEFT")
 	DamageTypeWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=1,insets={left=0,right=0,top=0,bottom=0}})
