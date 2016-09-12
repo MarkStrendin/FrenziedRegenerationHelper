@@ -39,9 +39,12 @@ local windowVisible = false
 -- Create a table to store the past 1 second of damage taken
 -- We will keep each second seperate, and prune off anything beyond 5 periodically
 -- When we display the numbers, we'll display 
-local TrackedDamageTable = {}
-local damageTrackedSinceLastInterval = 0
+local TrackedDamageTable_Physical = {}
+local TrackedDamageTable_Magical = {}
+local damageTrackedSinceLastInterval_Physical = 0
+local damageTrackedSinceLastInterval_Magical = 0
 local damageTrackingTableInitialized = false
+
 
 -- Is the addon window initialized?
 local frameInitialized = false
@@ -56,6 +59,22 @@ local isPlayerInCombat = false
 
 -- Store the version of the addon, from the .toc file, so we can display it
 local addonVersion = GetAddOnMetadata(addonName, "Version")
+
+local showDamageType = true
+
+
+-- colors
+
+local color_damagetype_physical_r = 255
+local color_damagetype_physical_g = 116
+local color_damagetype_physical_b = 0
+
+local color_damagetype_magical_r = 104
+local color_damagetype_magical_g = 11
+local color_damagetype_magical_b = 171
+
+local color_damagetype_dim = 64
+
 
 -- ----------------------------------------------
 -- General housekeeping functions
@@ -88,6 +107,15 @@ local function FormatNumber(n)
 
 	local left,num,right = string.match(intValue,'^([^%d]*%d)(%d*)(.-)$')
 	return left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())..right
+end
+
+-- Converts an integer RGB value to it's decimal equivalent
+local function ConvertRGBToDecimal(n)
+	if (n == 0) then
+		return 0
+	else
+		return (n/255)
+	end
 end
 
 -- Is Frenzied Regeneration available to the player in this spec, or at this level?
@@ -145,10 +173,6 @@ DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 -- Event handlers
 -- ----------------------------------------------
 
-local function Handler_PlayerDamaged(amount)
-	ShowMessage(amount)
-end
-
 -- The shapeshift event is fired constantly during combat for some reason, so
 -- this function is going to get called alot of extra times
 local function Handler_Shapeshift() 
@@ -197,9 +221,10 @@ local function InitWindow()
 	bonusHealing_WildFlesh = frh_WildFleshBonus
 
 	ShowDebugMessage("Trying to create window...")
+	-- Damage number display window
 	DisplayWindow = CreateFrame("Frame", "containerFrame" ,UIParent)
 	DisplayWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=4,insets={left=0.5,right=0.5,top=0.5,bottom=0.5}})
-	DisplayWindow:SetSize(200, 22)
+	DisplayWindow:SetSize(200, 25)
 	DisplayWindow:SetBackdropColor(r, g, b, 0.5)
 	DisplayWindow:SetBackdropBorderColor(0, 0, 0, 1)
 	DisplayWindow:SetPoint("CENTER", 0, 0)
@@ -220,6 +245,27 @@ local function InitWindow()
 	DisplayWindow:SetScript("OnDragStop", function(self)
 			self:StopMovingOrSizing()
 			end)
+
+	-- Physical/Magic window (experimental)
+	DamageTypeWindow = CreateFrame("StatusBar", "damageTypeFrame", DisplayWindow)
+	DamageTypeWindow:SetStatusBarTexture("Interface\\ChatFrame\\ChatFrameBackground")
+	DamageTypeWindow:GetStatusBarTexture():SetHorizTile(false)
+	DamageTypeWindow:SetMinMaxValues(0, 100)
+	DamageTypeWindow:SetValue(100)
+	DamageTypeWindow:SetWidth(200)
+	DamageTypeWindow:SetHeight(3)
+	DamageTypeWindow:SetReverseFill(true)
+	DamageTypeWindow:SetPoint("BOTTOMLEFT",DisplayWindow,"BOTTOMLEFT")
+	DamageTypeWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=1,insets={left=0,right=0,top=0,bottom=0}})
+	DamageTypeWindow:SetStatusBarColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
+	DamageTypeWindow:SetBackdropColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
+
+	if (showDamageType == true) then
+		DamageTypeWindow:Show()
+	else
+		DamageTypeWindow:Hide()
+	end
+
 
 	if (hideOutsideBearForm) then
 		HideMainWindow()
@@ -297,7 +343,8 @@ local function InitializeDamageTable()
 	for x=1,damageTableMaxEntries,1 do		
 
 		ShowDebugMessage("Damage table "..x.." initialized to 0")
-		TrackedDamageTable[x] = 0
+		TrackedDamageTable_Physical[x] = 0
+		TrackedDamageTable_Magical[x] = 0
 	end
 	damageTrackingTableInitialized = true
 end
@@ -305,29 +352,64 @@ end
 -- should be called every second, this keeps the damage table up to date for the UI functions
 local function CycleDamageTable() 
 
-	-- Create a new working table
-	local workingDamageTable = {}
+	-- Physical table
+	local updatedDamageTable_Physical = {}
 
 	-- The current up to date value goes in slot 1
-	workingDamageTable[1] = damageTrackedSinceLastInterval
-	damageTrackedSinceLastInterval = 0
+	updatedDamageTable_Physical[1] = damageTrackedSinceLastInterval_Physical
+	damageTrackedSinceLastInterval_Physical = 0
 
 	-- All other slots are the values from the "active" damage table, shifted down one interval
-
 	for x=2,damageTableMaxEntries,1 do	
-		workingDamageTable[x] = TrackedDamageTable[x-1]
+		updatedDamageTable_Physical[x] = TrackedDamageTable_Physical[x-1]
 	end
 
 	-- Assign our working table to the "active" table, which should dispose of the old values during garbage collection
-	TrackedDamageTable = workingDamageTable
+	TrackedDamageTable_Physical = updatedDamageTable_Physical
+
+
+
+
+	-- Magical table
+	local updatedDamageTable_Magical = {}
+
+	-- The current up to date value goes in slot 1
+	updatedDamageTable_Magical[1] = damageTrackedSinceLastInterval_Magical
+	damageTrackedSinceLastInterval_Magical = 0
+
+	-- All other slots are the values from the "active" damage table, shifted down one interval
+	for x=2,damageTableMaxEntries,1 do	
+		updatedDamageTable_Magical[x] = TrackedDamageTable_Magical[x-1]
+	end
+
+	-- Assign our working table to the "active" table, which should dispose of the old values during garbage collection
+	TrackedDamageTable_Magical = updatedDamageTable_Magical
+end
+
+
+local function GetDamageTableTotal_Physical()	
+	totalDamage = 0
+	for x=1,frenziedRegenSeconds,1 do	
+		totalDamage = totalDamage + TrackedDamageTable_Physical[x]
+	end
+	return totalDamage
+end
+
+local function GetDamageTableTotal_Magical()
+	totalDamage = 0
+	for x=1,frenziedRegenSeconds,1 do	
+		totalDamage = totalDamage + TrackedDamageTable_Magical[x]
+	end
+	return totalDamage
 end
 
 local function GetDamageTableTotal() 
 	totalDamage = 0
 	for x=1,frenziedRegenSeconds,1 do	
-		totalDamage = totalDamage + TrackedDamageTable[x]
+		totalDamage = totalDamage + TrackedDamageTable_Physical[x]
+		totalDamage = totalDamage + TrackedDamageTable_Magical[x]
 	end
-	return  totalDamage
+	return totalDamage
 end
 
 local function  UpdateTotalDisplay() 
@@ -354,31 +436,63 @@ local function  UpdateTotalDisplay()
 	displayAmount = GetAdjustedFRHealingAmount(displayAmount)
 
 	DisplayWindow.text:SetText(FormatNumber(displayAmount))
-
 end	
 
-local function TrackDamage(dmg)
-	damageTrackedSinceLastInterval = damageTrackedSinceLastInterval + dmg
+local DamageTypeBarActivated = false
+local function DimDamageTypeDisplay()
+	if (DamageTypeBarActivated == true) then
+		DamageTypeWindow:SetStatusBarColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
+		DamageTypeWindow:SetBackdropColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
+		DamageTypeBarActivated = false
+	end
 end
 
--- ----------------------------------------------
--- Debug stuff
--- ----------------------------------------------
-
-local arbitraryCounter = 0
-local function debug_DisplayDamageTable() 
-	if (damageTrackingTableInitialized == true) then
-		arbitraryCounter = arbitraryCounter + 1
-		ShowDebugMessage("------------------------ ".. arbitraryCounter)
-		ShowDebugMessage("Damage table: ")
-		for x=1,damageTableMaxEntries,1 do		
-			ShowDebugMessage(" "..x..": "..TrackedDamageTable[x])
-		end
-		ShowDebugMessage(" Total damage: "..GetDamageTableTotal())
+local function ActivateDamageTypeDisplay()
+	if (DamageTypeBarActivated == false) then
+		DamageTypeWindow:SetStatusBarColor(ConvertRGBToDecimal(color_damagetype_physical_r), ConvertRGBToDecimal(color_damagetype_physical_g), ConvertRGBToDecimal(color_damagetype_physical_b))
+		DamageTypeWindow:SetBackdropColor(ConvertRGBToDecimal(color_damagetype_magical_r), ConvertRGBToDecimal(color_damagetype_magical_g), ConvertRGBToDecimal(color_damagetype_magical_b))
+		DamageTypeBarActivated = true
 	end
 end
 
 
+local function UpdateDamageTypeBar()
+	local totalDamage = GetDamageTableTotal()
+	local totalDamage_Physical = GetDamageTableTotal_Physical()
+	if (totalDamage > 0) then
+		local percentPhysical = (totalDamage_Physical / totalDamage) * 100
+		ActivateDamageTypeDisplay()
+		DamageTypeWindow:SetValue(percentPhysical)
+	else
+		DimDamageTypeDisplay()
+		-- Maybe hide the damage type window? Somehow disable it so that it's not displaying anything?
+	end
+end
+
+local function TrackPhysicalDamage(dmg)
+	--  Check the damage type here with a parameter
+	damageTrackedSinceLastInterval_Physical = damageTrackedSinceLastInterval_Physical + dmg
+	if (showDebugMessages == true) then
+		ShowDebugMessage("Tracking physical damage: " .. dmg)
+	end
+end
+
+local function TrackMagicalDamage(dmg)
+	damageTrackedSinceLastInterval_Magical = damageTrackedSinceLastInterval_Magical + dmg
+	if (showDebugMessages == true) then
+		ShowDebugMessage("Tracking magical damage: " .. dmg)
+	end
+end
+
+local function TrackEnvironmentalDamage(dmg)
+	-- Not currently supported, so add this later
+
+	if (include_environmental_damage == true) then
+		if (showDebugMessages == true) then
+			ShowDebugMessage("Tracking environment damage: " .. dmg)
+		end
+	end
+end
 
 -- ----------------------------------------------
 -- This runs every second, apparently
@@ -400,9 +514,8 @@ local function onFrameUpdate(self, elapsed)
 			if (meterRunning == true) then
 				CycleDamageTable()
 				UpdateTotalDisplay()
-
-				if (showDebugMessages == true) then
-					debug_DisplayDamageTable()
+				if (showDamageType == true) then
+					UpdateDamageTypeBar()
 				end
 			end			
 		end
@@ -451,21 +564,29 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 
 				if (eventType == "SWING_DAMAGE") then
 					amount = select(10,...)
+					if (amount > 0) then
+						TrackPhysicalDamage(amount)
+					end
 				end
 
 				if (eventType == "ENVIRONMENTAL_DAMAGE") then
 					if (include_environmental_damage == true) then
 						amount = select(11,...)
-					end
+
+						if (amount > 0) then
+							TrackEnvironmentalDamage(amount)
+						end
+					end					
 				end
 
 				if (eventType == "SPELL_DAMAGE" or arg2 == "SPELL_PERIODIC_DAMAGE") then
 					amount = select(13,...)
+
+					if (amount > 0) then
+						TrackMagicalDamage(amount)
+					end
 				end
 
-				if (amount > 0) then
-					TrackDamage(amount)
-				end
 			end
 		end
 
