@@ -582,8 +582,16 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 				if (eventType == "SPELL_DAMAGE" or arg2 == "SPELL_PERIODIC_DAMAGE") then
 					amount = select(13,...)
 
+					-- We need to seperate out the "spells" that do physical damage from the ones that don't
+					-- Damage schools can be found here: http://wowwiki.wikia.com/wiki/API_COMBAT_LOG_EVENT
+					school = select(15,...)
+
 					if (amount > 0) then
-						TrackMagicalDamage(amount)
+						if (school == 1) then
+							TrackPhysicalDamage(amount)
+						else
+							TrackMagicalDamage(amount)
+						end
 					end
 				end
 
