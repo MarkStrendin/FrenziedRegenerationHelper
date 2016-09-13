@@ -1,40 +1,18 @@
 -- ----------------------------------------------
--- Configuration
+-- If the player is not a druid, stop loading the addon
 -- ----------------------------------------------
 
--- How much of the damage done does Frenzied Regeneration heal back?
-local frDamagedHealed = 0.5
-
--- How much of the player's health is the minimum heal? (detault is 5%)
-local minimumHealMultiplier = 0.05
-
--- Show debug messages?
-local showDebugMessages = false
-
--- Should we hide the window if the player isn't in bear form?
-local hideOutsideBearForm = true
+if select(2, UnitClass("player")) ~= "DRUID" then
+	FRHelper_ShowMessage("Will stop loading, as player is not a druid")
+	return
+end
 
 -- ----------------------------------------------
--- You shouldn't need to touch anything past here
+-- Local variables
 -- ----------------------------------------------
 
--- Should environmental damage count?
--- Currently, frenzied regeneration doesn't count it, but I'm not sure if this is intentional or not.
-local include_environmental_damage = false
-
--- How many seconds does frenzied regeneration go back? (default: 5)
-local frenziedRegenSeconds = 5
-
--- How many seconds back should we keep in the table?
-local damageTableMaxEntries = 5 -- If this value is 1 or lower, this addon will crash
-
--- What is the stance number of bear form
-local bearFormID = 1
-
--- Addon name, to detect when this addon has been loaded (don't touch this)
-local addonName = "FrenziedRegenerationHelper"
-
-local windowVisible = false
+-- Variable to track if the window is visible or not
+local isDamageWindowVisible = false
 
 -- Create a table to store the past 1 second of damage taken
 -- We will keep each second seperate, and prune off anything beyond 5 periodically
@@ -45,64 +23,19 @@ local damageTrackedSinceLastInterval_Physical = 0
 local damageTrackedSinceLastInterval_Magical = 0
 local damageTrackingTableInitialized = false
 
-
 -- Is the addon window initialized?
-local frameInitialized = false
-
--- Calculated bonus from Wild Flesh
-local bonusHealing_WildFlesh = 0
+local isMainAddonFrameInitialized = false
 
 -- We want to disable the bulk of this addon's calculating if the player is in a different spec
-local meterRunning = false
+local isDamageMeterRunning = false
 
 local isPlayerInCombat = false
-
--- Store the version of the addon, from the .toc file, so we can display it
-local addonVersion = GetAddOnMetadata(addonName, "Version")
-
-local showDamageType = true
-
-
--- colors
--- Orange: rgb(223, 92, 23)
-local color_damagetype_physical_r = 223
-local color_damagetype_physical_g = 92
-local color_damagetype_physical_b = 23
-
--- Cyan rgb(86, 165, 220)
-local color_damagetype_magical_r = 86
-local color_damagetype_magical_g = 165
-local color_damagetype_magical_b = 220
-
-local color_damagetype_dim = 64
-
 
 -- ----------------------------------------------
 -- General housekeeping functions
 -- ----------------------------------------------
 
-local function ShowDebugMessage(msg)
-	if (showDebugMessages == true) then
-	print("|cff3399FF"..addonName.."-DEBUG|r: "..msg)
-	end
-end
-
-local function ShowMessage(msg) 
-	print("|cff3399FF"..addonName.."|r: "..msg)
-end
-
-local function HideMainWindow()
-	DisplayWindow:Hide()
-	windowVisible = false
-end
-
-local function ShowMainWindow()
-	if (windowVisible == false) then
-		DisplayWindow:Show()
-		windowVisible = true
-	end
-end
-
+-- How should the damage number be displayed in the window
 local function FormatNumber(n) 
 	local intValue = math.ceil(n)
 
@@ -110,12 +43,15 @@ local function FormatNumber(n)
 	return left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())..right
 end
 
--- Converts an integer RGB value to it's decimal equivalent
-local function ConvertRGBToDecimal(n)
-	if (n == 0) then
-		return 0
-	else
-		return (n/255)
+local function HideMainWindow()
+	FrenziedRegenerationHelper_DamageWindow:Hide()
+	isDamageWindowVisible = false
+end
+
+local function ShowMainWindow()
+	if (isDamageWindowVisible == false) then
+		FrenziedRegenerationHelper_DamageWindow:Show()
+		isDamageWindowVisible = true
 	end
 end
 
@@ -131,42 +67,33 @@ end
 
 local function CheckIfPlayerCanUseFrenziedRegen()
 		if (CanPlayerUseFrenziedRegen()) then
-			meterRunning = true
+			isDamageMeterRunning = true
 		else
-			meterRunning = false
+			isDamageMeterRunning = false
 		end
 end		
-
--- ----------------------------------------------
--- If the player is not a druid, stop loading the addon
--- ----------------------------------------------
-
-if select(2, UnitClass("player")) ~= "DRUID" then
-	ShowMessage("Will stop loading, as player is not a druid")
-	return
-end
 
 -- ----------------------------------------------
 -- Set up the main container frame
 -- ----------------------------------------------
 
-local DamageInLastFiveFrame = CreateFrame("FRAME")
+local FrenziedRegenerationHelper = CreateFrame("FRAME")
 
 -- Event for when the addon is loaded, so we can print a message indicating such
-DamageInLastFiveFrame:RegisterEvent("ADDON_LOADED")
+FrenziedRegenerationHelper:RegisterEvent("ADDON_LOADED")
 
 -- Event for if the player switches forms - we only need to display the window in bear form
-DamageInLastFiveFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+FrenziedRegenerationHelper:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 
 -- Hook the combat log
-DamageInLastFiveFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+FrenziedRegenerationHelper:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
 
 -- When the player changes talent specs
-DamageInLastFiveFrame:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
+FrenziedRegenerationHelper:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED")
 
 -- Track if the player is in combat or not
-DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+FrenziedRegenerationHelper:RegisterEvent("PLAYER_REGEN_ENABLED")
+FrenziedRegenerationHelper:RegisterEvent("PLAYER_REGEN_DISABLED")
 
 
 
@@ -179,8 +106,8 @@ DamageInLastFiveFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 local function Handler_Shapeshift() 
 	-- If the player shapeshifts into bear form, show the addon
 
-	if (hideOutsideBearForm) then
-		if (GetShapeshiftForm() == bearFormID) then
+	if (FRHelperOptions_Get_HideOutsideBearForm()) then
+		if (GetShapeshiftForm() == FRHelperStatic.bearFormID) then
 			if (CanPlayerUseFrenziedRegen()) then
 				ShowMainWindow()
 			end
@@ -202,7 +129,7 @@ end
 -- Player has entered combat
 local function Handler_PlayerRegenDisabled() 
 	isPlayerInCombat = true
-	if (meterRunning == false) then
+	if (isDamageMeterRunning == false) then
 		CheckIfPlayerCanUseFrenziedRegen()
 	end
 end
@@ -212,43 +139,35 @@ end
 -- ----------------------------------------------
 
 local function InitWindow()
-
-	-- Load some variables
-	if (frh_WildFleshBonus == nil) then
-		frh_WildFleshBonus = 0
-	end
-
-	-- Load any saved variables
-	bonusHealing_WildFlesh = frh_WildFleshBonus
-
-	ShowDebugMessage("Trying to create window...")
+	FRHelper_InitSavedVariables()
+	FRHelper_ShowDebugMessage("Trying to create window...")
 	-- Damage number display window
-	DisplayWindow = CreateFrame("Frame", "containerFrame" ,UIParent)
-	DisplayWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=4,insets={left=0.5,right=0.5,top=0.5,bottom=0.5}})
-	DisplayWindow:SetSize(200, 25)
-	DisplayWindow:SetBackdropColor(r, g, b, 0.5)
-	DisplayWindow:SetBackdropBorderColor(0, 0, 0, 1)
-	DisplayWindow:SetPoint("CENTER", 0, 0)
+	FrenziedRegenerationHelper_DamageWindow = CreateFrame("Frame", "FrenziedRegenerationHelper_DamageWindow" ,UIParent)
+	FrenziedRegenerationHelper_DamageWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=4,insets={left=0.5,right=0.5,top=0.5,bottom=0.5}})
+	FrenziedRegenerationHelper_DamageWindow:SetSize(200, 25)
+	FrenziedRegenerationHelper_DamageWindow:SetBackdropColor(r, g, b, 0.5)
+	FrenziedRegenerationHelper_DamageWindow:SetBackdropBorderColor(0, 0, 0, 1)
+	FrenziedRegenerationHelper_DamageWindow:SetPoint("CENTER", 0, 0)
 
 	-- Here's a list of fonts http://wow.gamepedia.com/API_FontInstance_SetFontObject
-	DisplayWindow.text = DisplayWindow:CreateFontString("displayString", "BACKGROUND", "GameFontHighlight")
-	DisplayWindow.text:SetAllPoints()
-	DisplayWindow.text:SetText("Damage in last "..frenziedRegenSeconds.."s")
-	DisplayWindow.text:SetPoint("CENTER", 0, 0)
+	FrenziedRegenerationHelper_DamageWindow.text = FrenziedRegenerationHelper_DamageWindow:CreateFontString("displayString", "BACKGROUND", "GameFontHighlight")
+	FrenziedRegenerationHelper_DamageWindow.text:SetAllPoints()
+	FrenziedRegenerationHelper_DamageWindow.text:SetText("Damage in last "..FRHelperStatic.frenziedRegenSeconds.."s")
+	FrenziedRegenerationHelper_DamageWindow.text:SetPoint("CENTER", 0, 0)
 
 	-- Allow the window to be moved and handle the window being dragged
-	DisplayWindow:SetMovable(true)
-	DisplayWindow:EnableMouse(true)
-	DisplayWindow:RegisterForDrag("LeftButton")
-	DisplayWindow:SetScript("OnDragStart", function(self)
+	FrenziedRegenerationHelper_DamageWindow:SetMovable(true)
+	FrenziedRegenerationHelper_DamageWindow:EnableMouse(true)
+	FrenziedRegenerationHelper_DamageWindow:RegisterForDrag("LeftButton")
+	FrenziedRegenerationHelper_DamageWindow:SetScript("OnDragStart", function(self)
 			self:StartMoving()
 			end)
-	DisplayWindow:SetScript("OnDragStop", function(self)
+	FrenziedRegenerationHelper_DamageWindow:SetScript("OnDragStop", function(self)
 			self:StopMovingOrSizing()
 			end)
 
 	-- Physical/Magic window (experimental)
-	DamageTypeWindow = CreateFrame("StatusBar", "damageTypeFrame", DisplayWindow)
+	DamageTypeWindow = CreateFrame("StatusBar", "damageTypeFrame", FrenziedRegenerationHelper_DamageWindow)
 	DamageTypeWindow:SetStatusBarTexture("Interface\\ChatFrame\\ChatFrameBackground")
 	DamageTypeWindow:GetStatusBarTexture():SetHorizTile(false)
 	DamageTypeWindow:SetMinMaxValues(0, 100)
@@ -256,27 +175,28 @@ local function InitWindow()
 	DamageTypeWindow:SetWidth(200)
 	DamageTypeWindow:SetHeight(2)
 	DamageTypeWindow:SetReverseFill(true)
-	DamageTypeWindow:SetPoint("BOTTOMLEFT",DisplayWindow,"BOTTOMLEFT")
+	DamageTypeWindow:SetPoint("BOTTOMLEFT",FrenziedRegenerationHelper_DamageWindow,"BOTTOMLEFT")
 	DamageTypeWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=1,insets={left=0,right=0,top=0,bottom=0}})
-	DamageTypeWindow:SetStatusBarColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
-	DamageTypeWindow:SetBackdropColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
+	DamageTypeWindow:SetStatusBarColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim))
+	DamageTypeWindow:SetBackdropColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim))
 
-	if (showDamageType == true) then
+	if (FRHelperOptions_Get_ShowDamageTypeBar() == true) then
 		DamageTypeWindow:Show()
 	else
 		DamageTypeWindow:Hide()
 	end
 
 
-	if (hideOutsideBearForm) then
+	if (FRHelperOptions_Get_HideOutsideBearForm()) then
 		HideMainWindow()
 
-		if (GetShapeshiftForm() == bearFormID) then
+		if (GetShapeshiftForm() == FRHelperStatic.bearFormID) then
 			ShowMainWindow()
 		end	
 	end
 
-	frameInitialized = true
+	isMainAddonFrameInitialized = true
+
 end
 
 -- ----------------------------------------------
@@ -300,21 +220,12 @@ local function GetSkysecsHoldBonus()
 end
 
 local function GetAdjustedFRHealingAmount(baseAmount) 
-	return (baseAmount * (1 + bonusHealing_WildFlesh + GetGuardianOfEluneBonus())) + GetSkysecsHoldBonus()
+	return (baseAmount * (1 + FRHelperOptions_Get_WildFleshBonus() + GetGuardianOfEluneBonus())) + GetSkysecsHoldBonus()
 end
 
 -- ----------------------------------------------
 -- Artifact querying logic
 -- ----------------------------------------------
-
-local function UpdateWildFleshBonus(bonus) 
-	-- This seems to fail for some reason if it's comparing numbers, so compare strings intead
-	if (tostring(bonus) ~= tostring(bonusHealing_WildFlesh)) then
-		ShowMessage("Updating known bonus from Claws of Ursoc to "..(bonus*100).."% (was "..(bonusHealing_WildFlesh*100).."%)")
-		bonusHealing_WildFlesh = bonus
-		frh_WildFleshBonus = bonusHealing_WildFlesh
-	end
-end
 
 -- This gets called every second ... until I find a better way to do it
 local function CalculateWildFleshBonus() 
@@ -329,7 +240,7 @@ local function CalculateWildFleshBonus()
 		        local spellID, _, currentRank = C_ArtifactUI.GetPowerInfo(powers[i])
 		     	
 		     	if (spellID == 200400) then
-					UpdateWildFleshBonus(0.05 * currentRank)
+					FRHelperOptions_Set_WildFleshBonus(0.05 * currentRank)
 		     	end
 		    end
 		end
@@ -341,9 +252,9 @@ end
 -- ----------------------------------------------
 
 local function InitializeDamageTable()
-	for x=1,damageTableMaxEntries,1 do		
+	for x=1,FRHelperStatic.damageTableMaxEntries,1 do		
 
-		ShowDebugMessage("Damage table "..x.." initialized to 0")
+		FRHelper_ShowDebugMessage("Damage table "..x.." initialized to 0")
 		TrackedDamageTable_Physical[x] = 0
 		TrackedDamageTable_Magical[x] = 0
 	end
@@ -361,7 +272,7 @@ local function CycleDamageTable()
 	damageTrackedSinceLastInterval_Physical = 0
 
 	-- All other slots are the values from the "active" damage table, shifted down one interval
-	for x=2,damageTableMaxEntries,1 do	
+	for x=2,FRHelperStatic.damageTableMaxEntries,1 do	
 		updatedDamageTable_Physical[x] = TrackedDamageTable_Physical[x-1]
 	end
 
@@ -379,7 +290,7 @@ local function CycleDamageTable()
 	damageTrackedSinceLastInterval_Magical = 0
 
 	-- All other slots are the values from the "active" damage table, shifted down one interval
-	for x=2,damageTableMaxEntries,1 do	
+	for x=2,FRHelperStatic.damageTableMaxEntries,1 do	
 		updatedDamageTable_Magical[x] = TrackedDamageTable_Magical[x-1]
 	end
 
@@ -390,7 +301,7 @@ end
 
 local function GetDamageTableTotal_Physical()	
 	totalDamage = 0
-	for x=1,frenziedRegenSeconds,1 do	
+	for x=1,FRHelperStatic.frenziedRegenSeconds,1 do	
 		totalDamage = totalDamage + TrackedDamageTable_Physical[x]
 	end
 	return totalDamage
@@ -398,7 +309,7 @@ end
 
 local function GetDamageTableTotal_Magical()
 	totalDamage = 0
-	for x=1,frenziedRegenSeconds,1 do	
+	for x=1,FRHelperStatic.frenziedRegenSeconds,1 do	
 		totalDamage = totalDamage + TrackedDamageTable_Magical[x]
 	end
 	return totalDamage
@@ -406,7 +317,7 @@ end
 
 local function GetDamageTableTotal() 
 	totalDamage = 0
-	for x=1,frenziedRegenSeconds,1 do	
+	for x=1,FRHelperStatic.frenziedRegenSeconds,1 do	
 		totalDamage = totalDamage + TrackedDamageTable_Physical[x]
 		totalDamage = totalDamage + TrackedDamageTable_Magical[x]
 	end
@@ -417,18 +328,18 @@ local function  UpdateTotalDisplay()
 	local displayAmount = 0	
 
 	-- Color the text acordingly
-	DisplayWindow.text:SetTextColor(1,1,1, 0.5)
+	FrenziedRegenerationHelper_DamageWindow.text:SetTextColor(1,1,1, 0.5)
 
 	-- Calculate the amount that would be healed from damage taken
-	local amountHealedFromDamage = (GetDamageTableTotal() * frDamagedHealed)
+	local amountHealedFromDamage = (GetDamageTableTotal() * FRHelperStatic.frDamagedHealed)
 
 	-- Calculate the minimum amount FR will heal (5% of the players max health)
-	local minimumHealAmount = UnitHealthMax("player") * minimumHealMultiplier
+	local minimumHealAmount = UnitHealthMax("player") * FRHelperStatic.minimumHealMultiplier
 
 	-- Figure out which would heal more, and display that one
 	if (amountHealedFromDamage > minimumHealAmount) then
 		displayAmount = amountHealedFromDamage
-		DisplayWindow.text:SetTextColor(1,1,1,1)
+		FrenziedRegenerationHelper_DamageWindow.text:SetTextColor(1,1,1,1)
 	else
 		displayAmount = minimumHealAmount
 	end
@@ -436,22 +347,22 @@ local function  UpdateTotalDisplay()
 	-- Take into account any bonuses to FR healing
 	displayAmount = GetAdjustedFRHealingAmount(displayAmount)
 
-	DisplayWindow.text:SetText(FormatNumber(displayAmount))
+	FrenziedRegenerationHelper_DamageWindow.text:SetText(FormatNumber(displayAmount))
 end	
 
 local DamageTypeBarActivated = false
 local function DimDamageTypeDisplay()
 	if (DamageTypeBarActivated == true) then
-		DamageTypeWindow:SetStatusBarColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
-		DamageTypeWindow:SetBackdropColor(ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim), ConvertRGBToDecimal(color_damagetype_dim))
+		DamageTypeWindow:SetStatusBarColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim))
+		DamageTypeWindow:SetBackdropColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim))
 		DamageTypeBarActivated = false
 	end
 end
 
 local function ActivateDamageTypeDisplay()
 	if (DamageTypeBarActivated == false) then
-		DamageTypeWindow:SetStatusBarColor(ConvertRGBToDecimal(color_damagetype_physical_r), ConvertRGBToDecimal(color_damagetype_physical_g), ConvertRGBToDecimal(color_damagetype_physical_b))
-		DamageTypeWindow:SetBackdropColor(ConvertRGBToDecimal(color_damagetype_magical_r), ConvertRGBToDecimal(color_damagetype_magical_g), ConvertRGBToDecimal(color_damagetype_magical_b))
+		DamageTypeWindow:SetStatusBarColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_physical_r), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_physical_g), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_physical_b))
+		DamageTypeWindow:SetBackdropColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_magical_r), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_magical_g), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_magical_b))
 		DamageTypeBarActivated = true
 	end
 end
@@ -473,24 +384,24 @@ end
 local function TrackPhysicalDamage(dmg)
 	--  Check the damage type here with a parameter
 	damageTrackedSinceLastInterval_Physical = damageTrackedSinceLastInterval_Physical + dmg
-	if (showDebugMessages == true) then
-		ShowDebugMessage("Tracking physical damage: " .. dmg)
+	if (FRHelperOptions_Get_ShowDebugMessages() == true) then
+		FRHelper_ShowDebugMessage("Tracking physical damage: " .. dmg)
 	end
 end
 
 local function TrackMagicalDamage(dmg)
 	damageTrackedSinceLastInterval_Magical = damageTrackedSinceLastInterval_Magical + dmg
-	if (showDebugMessages == true) then
-		ShowDebugMessage("Tracking magical damage: " .. dmg)
+	if (FRHelperOptions_Get_ShowDebugMessages() == true) then
+		FRHelper_ShowDebugMessage("Tracking magical damage: " .. dmg)
 	end
 end
 
 local function TrackEnvironmentalDamage(dmg)
 	-- Not currently supported, so add this later
 
-	if (include_environmental_damage == true) then
-		if (showDebugMessages == true) then
-			ShowDebugMessage("Tracking environment damage: " .. dmg)
+	if (FRHelperStatic.include_environmental_damage == true) then
+		if (FRHelperOptions_Get_ShowDebugMessages() == true) then
+			FRHelper_ShowDebugMessage("Tracking environment damage: " .. dmg)
 		end
 	end
 end
@@ -507,15 +418,14 @@ local function onFrameUpdate(self, elapsed)
 	if (totalElapsedSeconds >= 1) then
 		totalElapsedSeconds = 0
 
-		if (frameInitialized == true) then
+		if (isMainAddonFrameInitialized == true) then
 			-- Stuff to run every second goes here
-			
 			CalculateWildFleshBonus()
 
-			if (meterRunning == true) then
+			if (isDamageMeterRunning == true) then
 				CycleDamageTable()
 				UpdateTotalDisplay()
-				if (showDamageType == true) then
+				if (FRHelperOptions_Get_ShowDamageTypeBar() == true) then
 					UpdateDamageTypeBar()
 				end
 			end			
@@ -529,8 +439,8 @@ end
 -- ----------------------------------------------
 local function MainEventHandler(self, event, arg1, eventType, ...)
 	if (event == "ADDON_LOADED") then
-		if (string.lower(arg1) == string.lower(addonName)) then
-			ShowMessage("Version "..addonVersion.." loaded - Window will appear in bear form.")
+		if (string.lower(arg1) == string.lower(FRHelperStatic.addonName)) then
+			FRHelper_ShowMessage("Version "..FRHelperStatic.addonVersion.." loaded - Window will appear in bear form.")
 			InitializeDamageTable()
 			InitWindow()
 		end
@@ -571,7 +481,7 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 				end
 
 				if (eventType == "ENVIRONMENTAL_DAMAGE") then
-					if (include_environmental_damage == true) then
+					if (FRHelperStatic.include_environmental_damage == true) then
 						amount = select(11,...)
 
 						if (amount > 0) then
@@ -607,5 +517,5 @@ end
 -- This apparently needs to be done last
 -- ----------------------------------------------
 
-DamageInLastFiveFrame:SetScript("OnEvent", MainEventHandler)
-DamageInLastFiveFrame:SetScript("OnUpdate", onFrameUpdate)
+FrenziedRegenerationHelper:SetScript("OnEvent", MainEventHandler)
+FrenziedRegenerationHelper:SetScript("OnUpdate", onFrameUpdate)

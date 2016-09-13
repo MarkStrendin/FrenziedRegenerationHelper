@@ -3,6 +3,9 @@
 ## Notes: Small movable window that displays how much damage you've taken in the last 5 seconds (For Frenzied regeneration)
 ## Author: Mark Strendin
 ## Version: 1.3
-## SavedVariablesPerCharacter: frh_WildFleshBonus
+## SavedVariablesPerCharacter: FRHelper_SavedVariables
 
+common.lua
+config_static.lua
+config_player.lua
 main.lua
