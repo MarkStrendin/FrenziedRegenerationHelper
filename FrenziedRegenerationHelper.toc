@@ -6,6 +6,8 @@
 ## SavedVariablesPerCharacter: FRHelper_SavedVariables
 
 common.lua
-config_static.lua
-config_player.lua
+FRHelperStatic.lua
+FRHelperOptions.lua
+DamageTracking.lua
+HealValueDisplayWindow.lua
 main.lua

@@ -8,7 +8,7 @@ end
 
 function FRHelper_ShowDebugMessage(msg)
 	if (FRHelperOptions_Get_ShowDebugMessages() == true) then
-	print("|cff3399FF"..FRHelperStatic.addonName.."-DEBUG|r: "..msg)
+		print("|cff3399FF"..FRHelperStatic.addonName.."-DEBUG|r: "..msg)
 	end
 end
 

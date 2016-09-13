@@ -13,7 +13,6 @@ FRHelperStatic.frDamagedHealed = 0.5;
 -- How much of the player's health is the minimum heal? (detault is 5%)
 FRHelperStatic.minimumHealMultiplier = 0.05;
 
-
 -- Should environmental damage count?
 -- Currently, frenzied regeneration dFRHelperStatic.oesn't count it, but I'm not sure if this is intentional or not.
 FRHelperStatic.include_environmental_damage = false;
