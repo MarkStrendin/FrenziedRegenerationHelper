@@ -4,6 +4,7 @@
 
 -- Variable to track if the window is visible or not
 local isDamageWindowVisible = false;
+local isDamageTypeBarVisible = false;
 
 local FrenziedRegenerationHelper_HealValueWindow = CreateFrame("Frame", "FrenziedRegenerationHelper_HealValueWindow" ,UIParent);
 
@@ -12,26 +13,60 @@ local FrenziedRegenerationHelper_HealValueWindow = CreateFrame("Frame", "Frenzie
 -- ----------------------------------------------
 
 -- How should the damage number be displayed in the window
-local function FormatNumber(n) 
+local function FormatNumber(n)
 	local intValue = math.ceil(n);
 
 	local left,num,right = string.match(intValue,'^([^%d]*%d)(%d*)(.-)$');
 	return left..(num:reverse():gsub('(%d%d%d)','%1,'):reverse())..right;
 end
 
-function HealValueDisplayWindow_Hide()
-	FrenziedRegenerationHelper_HealValueWindow:Hide();
-	isDamageWindowVisible = false;
+local function HealValueDisplayWindow_Hide()
+	if (isDamageWindowVisible == true) then
+		FrenziedRegenerationHelper_HealValueWindow:Hide();
+		isDamageWindowVisible = false;
+	end
 end
 
-function HealValueDisplayWindow_Show()
+local function HealValueDisplayWindow_Show()
 	if (isDamageWindowVisible == false) then
 		FrenziedRegenerationHelper_HealValueWindow:Show();
 		isDamageWindowVisible = true;
 	end
 end
 
-function HealValueDisplayWindow_Init() 
+local function DamageTypeBar_Hide()
+	if (isDamageTypeBarVisible == true) then
+		DamageTypeWindow:Hide();
+		isDamageTypeBarVisible = false;
+	end
+end
+
+local function DamageTypeBar_Show()
+	if (isDamageTypeBarVisible == false) then
+		DamageTypeWindow:Show();
+		isDamageTypeBarVisible = true;
+	end
+end
+
+function FRH_HealValueDisplayWindow_CheckIfWindowShouldBeShown()
+	if (FRHelperOptions_Get_ShowDamageTypeBar() == true) then
+		DamageTypeBar_Show();
+	else
+		DamageTypeBar_Hide();
+	end
+
+	if (FRHelperOptions_Get_HideOutsideBearForm() == true) then
+		if (GetShapeshiftForm() == FRHelperStatic.bearFormID) then
+			HealValueDisplayWindow_Show();
+		else
+			HealValueDisplayWindow_Hide();
+		end
+	else
+		HealValueDisplayWindow_Show();
+	end
+end
+
+function HealValueDisplayWindow_Init()
 	FRHelper_ShowDebugMessage("Trying to create heal value window...");
 
 	-- Damage number display window
@@ -83,7 +118,7 @@ function HealValueDisplayWindow_Init()
 
 		if (GetShapeshiftForm() == FRHelperStatic.bearFormID) then
 			HealValueDisplayWindow_Show();
-		end	
+		end
 	end
 end
 
@@ -91,7 +126,7 @@ end
 -- Frenzied Regen Bonus calculating logic
 -- ----------------------------------------------
 
-local function GetGuardianOfEluneBonus() 
+local function GetGuardianOfEluneBonus()
 	if (UnitBuff("player", "Guardian of Elune") ~= nil) then
 		return 0.20;
 	else
@@ -107,35 +142,42 @@ local function GetSkysecsHoldBonus()
 	end
 end
 
-local function GetAdjustedFRHealingAmount(baseAmount) 
+local function GetAdjustedFRHealingAmount(baseAmount)
 	return (baseAmount * (1 + FRHelperOptions_Get_WildFleshBonus() + GetGuardianOfEluneBonus())) + GetSkysecsHoldBonus();
 end
 
-function HealValueDisplayWindow_Update() 
-	local displayAmount = 0	
+function HealValueDisplayWindow_Update()
+	-- Check the addon options to see what we should be displayString
 
-	-- Color the text acordingly
-	FrenziedRegenerationHelper_HealValueWindow.text:SetTextColor(1,1,1, 0.5);
 
-	-- Calculate the amount that would be healed from damage taken
-	local amountHealedFromDamage = (FRH_DamageTracking_GetTotalDamage() * FRHelperStatic.frDamagedHealed);
+	if (isDamageWindowVisible == true) then
+		local displayAmount = 0
 
-	-- Calculate the minimum amount FR will heal (5% of the players max health)
-	local minimumHealAmount = UnitHealthMax("player") * FRHelperStatic.minimumHealMultiplier;
+		-- Color the text acordingly
+		FrenziedRegenerationHelper_HealValueWindow.text:SetTextColor(1,1,1, 0.5);
 
-	-- Figure out which would heal more, and display that one
-	if (amountHealedFromDamage > minimumHealAmount) then
-		displayAmount = amountHealedFromDamage;
-		FrenziedRegenerationHelper_HealValueWindow.text:SetTextColor(1,1,1,1);
+		-- Calculate the amount that would be healed from damage taken
+		local amountHealedFromDamage = (FRH_DamageTracking_GetTotalDamage() * FRHelperStatic.frDamagedHealed);
+
+		-- Calculate the minimum amount FR will heal (5% of the players max health)
+		local minimumHealAmount = UnitHealthMax("player") * FRHelperStatic.minimumHealMultiplier;
+
+		-- Figure out which would heal more, and display that one
+		if (amountHealedFromDamage > minimumHealAmount) then
+			displayAmount = amountHealedFromDamage;
+			FrenziedRegenerationHelper_HealValueWindow.text:SetTextColor(1,1,1,1);
+		else
+			displayAmount = minimumHealAmount;
+		end
+
+		-- Take into account any bonuses to FR healing
+		displayAmount = GetAdjustedFRHealingAmount(displayAmount);
+
+		FrenziedRegenerationHelper_HealValueWindow.text:SetText(FormatNumber(displayAmount));
 	else
-		displayAmount = minimumHealAmount;
+		FrenziedRegenerationHelper_HealValueWindow.text:SetText("...");
 	end
-
-	-- Take into account any bonuses to FR healing
-	displayAmount = GetAdjustedFRHealingAmount(displayAmount);
-
-	FrenziedRegenerationHelper_HealValueWindow.text:SetText(FormatNumber(displayAmount));
-end	
+end
 
 local DamageTypeBarActivated = false
 local function DimDamageTypeDisplay()

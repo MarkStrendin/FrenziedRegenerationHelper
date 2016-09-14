@@ -6,6 +6,7 @@ FRHelperStatic = {};
 
 -- Addon name, to detect when this addon has been loaded (don't touch this)
 FRHelperStatic.addonName = "FrenziedRegenerationHelper";
+FRHelperStatic.addonNameWithSpaces = "Frenzied Regeneration Helper";
 
 -- How much of the damage done does Frenzied Regeneration heal back?
 FRHelperStatic.frDamagedHealed = 0.5;

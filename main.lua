@@ -39,7 +39,7 @@ FrenziedRegenerationHelper:RegisterEvent("PLAYER_REGEN_DISABLED");
 
 -- Is Frenzied Regeneration available to the player in this spec, or at this level?
 -- Note: This will fail to detect the spell if the player has just logged in.
-local function CanPlayerUseFrenziedRegen() 
+local function CanPlayerUseFrenziedRegen()
 	if (IsPlayerSpell(22842)) then
 		return true
 	else
@@ -53,14 +53,14 @@ local function CheckIfPlayerCanUseFrenziedRegen()
 		else
 			FRH_DamageTracking_StopMeter()
 		end
-end	
+end
 
 -- ----------------------------------------------
 -- Artifact querying logic
 -- ----------------------------------------------
 
 -- This gets called every second ... until I find a better way to do it
-local function CalculateWildFleshBonus() 
+local function CalculateWildFleshBonus()
 	-- If the player doesn't have Claws of Ursoc equipped, then theres no bonus from it
 	if (IsEquippedItem("Claws of Ursoc") == true) then
 
@@ -70,7 +70,7 @@ local function CalculateWildFleshBonus()
 		if (powers) then
 			for i = 1, #powers do
 		        local spellID, _, currentRank = C_ArtifactUI.GetPowerInfo(powers[i])
-		     	
+
 		     	if (spellID == 200400) then
 					FRHelperOptions_Set_WildFleshBonus(0.05 * currentRank)
 		     	end
@@ -85,31 +85,23 @@ end
 
 -- The shapeshift event is fired constantly during combat for some reason, so
 -- this function is going to get called alot of extra times
-local function Handler_Shapeshift() 
+local function Handler_Shapeshift()
 	-- If the player shapeshifts into bear form, show the addon
 
-	if (FRHelperOptions_Get_HideOutsideBearForm()) then
-		if (GetShapeshiftForm() == FRHelperStatic.bearFormID) then
-			if (CanPlayerUseFrenziedRegen()) then
-				HealValueDisplayWindow_Show()
-			end
-		else
-			HealValueDisplayWindow_Hide()
-		end	
-	end
+	FRH_HealValueDisplayWindow_CheckIfWindowShouldBeShown();
 end
 
-local function Handler_ChangeTalentSpec() 
+local function Handler_ChangeTalentSpec()
 	CheckIfPlayerCanUseFrenziedRegen()
 end
 
 -- Player has left combat
-local function Handler_PlayerRegenEnabled() 
+local function Handler_PlayerRegenEnabled()
 	isPlayerInCombat = false
 end
 
 -- Player has entered combat
-local function Handler_PlayerRegenDisabled() 
+local function Handler_PlayerRegenDisabled()
 	isPlayerInCombat = true
 	if (FRH_DamageTracking_IsMeterRunning() == false) then
 		CheckIfPlayerCanUseFrenziedRegen()
@@ -124,6 +116,8 @@ local function InitializeAddon()
 	FRHelper_InitSavedVariables();
 	FRH_DamageTracking_InitializeDamageTable();
 	HealValueDisplayWindow_Init();
+	FRHelper_initOptionsPanel();
+	FRH_HealValueDisplayWindow_CheckIfWindowShouldBeShown();
 	FRHelper_ShowMessage("Version "..FRHelperStatic.addonVersion.." loaded - Window will appear in bear form.");
 end
 
@@ -132,7 +126,7 @@ end
 -- ----------------------------------------------
 
 local totalElapsedSeconds = 0
-local function onFrameUpdate(self, elapsed)	
+local function onFrameUpdate(self, elapsed)
 
 	-- Utilize the onFrameUpdate event to create a 1 second timer
 	totalElapsedSeconds = totalElapsedSeconds + elapsed
@@ -179,7 +173,7 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 
 		local unixtime = arg1
 		local sourceGUID, sourceName, sourceFlags, sourceRaidFlags, destGUID, destName, destFlags, destRaidFlags = select(2,...)
-		
+
 		-- We only care about damage IN, so only continue if the destination is the player
 		if (destGUID == UnitGUID("player")) then
 
@@ -203,7 +197,7 @@ local function MainEventHandler(self, event, arg1, eventType, ...)
 						if (amount > 0) then
 							-- If we were tracking environmental damage, we'd do it here
 						end
-					end					
+					end
 				end
 
 				if (eventType == "SPELL_DAMAGE" or arg2 == "SPELL_PERIODIC_DAMAGE") then

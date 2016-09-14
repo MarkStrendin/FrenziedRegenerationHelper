@@ -11,3 +11,4 @@ FRHelperOptions.lua
 DamageTracking.lua
 HealValueDisplayWindow.lua
 main.lua
+OptionsPanel.lua
