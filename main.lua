@@ -35,8 +35,6 @@ FrenziedRegenerationHelper:RegisterEvent("ACTIVE_TALENT_GROUP_CHANGED");
 FrenziedRegenerationHelper:RegisterEvent("PLAYER_REGEN_ENABLED");
 FrenziedRegenerationHelper:RegisterEvent("PLAYER_REGEN_DISABLED");
 
-
-
 -- Is Frenzied Regeneration available to the player in this spec, or at this level?
 -- Note: This will fail to detect the spell if the player has just logged in.
 local function CanPlayerUseFrenziedRegen()

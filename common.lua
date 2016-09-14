@@ -2,7 +2,7 @@
 -- Common functions
 -- ----------------------------------------------
 
-function FRHelper_ShowMessage(msg) 
+function FRHelper_ShowMessage(msg)
 	print("|cff3399FF"..FRHelperStatic.addonName.."|r: "..msg)
 end
 

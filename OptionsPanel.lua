@@ -8,8 +8,6 @@ local function boolToString(val)
 end
 
 local function chkOnChange(self)
-     FRHelper_ShowDebugMessage("Checkbox "..self:GetName().." changed: "..boolToString(self:GetChecked()));
-
      -- Use this callback to run another callback, passed as a parameter initially
      if (self:GetChecked() == nil) then
      else

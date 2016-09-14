@@ -28,6 +28,14 @@ function FRHelper_InitSavedVariables()
 	end
 
 	FRHelperOptions = FRHelper_SavedVariables;
+
+	if (FRHelperOptions.showDebugMessages == true) then
+		FRHelper_ShowDebugMessage("Saved variables: ");
+		for k,v in pairs(defaults) do
+			FRHelper_ShowDebugMessage(" " .. k .. ": " .. tostring(v));
+		end
+	end
+
 end
 
 -- ----------------------------------------------
@@ -61,13 +69,19 @@ end
 function FRHelperOptions_Set_WildFleshBonus(bonus)
 	-- This seems to fail for some reason if it's comparing numbers, so compare strings intead
 	if (tostring(bonus) ~= tostring(FRHelperOptions.bonusHealing_WildFlesh)) then
-		ShowMessage("Updating known bonus from Claws of Ursoc to "..(bonus*100).."% (was "..(FRHelperOptions.bonusHealing_WildFlesh*100).."%)")
+		FRHelper_ShowMessage("Updating known bonus from Claws of Ursoc to "..(bonus*100).."% (was "..(FRHelperOptions.bonusHealing_WildFlesh*100).."%)")
 		FRHelperOptions.bonusHealing_WildFlesh = bonus
 	end
 end
 
 function FRHelperOptions_Set_ShowDebugMessages(v)
+	if (FRHelper_ParseBool(v) == false) then
+		FRHelper_ShowDebugMessage("Debug messages are now disabled");
+	end
 	FRHelperOptions.showDebugMessages = FRHelper_ParseBool(v);
+	if (FRHelper_ParseBool(v) == true) then
+		FRHelper_ShowDebugMessage("Debug messages are now enabled");
+	end
 end
 
 function FRHelperOptions_Set_HideOutsideBearForm(v)

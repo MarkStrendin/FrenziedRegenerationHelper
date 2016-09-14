@@ -67,7 +67,6 @@ function FRH_HealValueDisplayWindow_CheckIfWindowShouldBeShown()
 end
 
 function HealValueDisplayWindow_Init()
-	FRHelper_ShowDebugMessage("Trying to create heal value window...");
 
 	-- Damage number display window
 	FrenziedRegenerationHelper_HealValueWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=4,insets={left=0.5,right=0.5,top=0.5,bottom=0.5}});
