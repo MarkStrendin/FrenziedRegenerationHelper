@@ -28,14 +28,14 @@ function FRHelper_InitSavedVariables()
 	end
 
 	FRHelperOptions = FRHelper_SavedVariables;
-
 	if (FRHelperOptions.showDebugMessages == true) then
 		FRHelper_ShowDebugMessage("Saved variables: ");
-		for k,v in pairs(defaults) do
+		for k,v in pairs(FRHelperOptions) do
 			FRHelper_ShowDebugMessage(" " .. k .. ": " .. tostring(v));
 		end
 	end
 
+	FRHelper_initOptionsPanel();
 end
 
 -- ----------------------------------------------

@@ -28,3 +28,11 @@ function FRHelper_ParseBool(v)
 		return false;
 	end
 end
+
+function boolToString(val)
+     if (val == true) then
+          return "TRUE";
+     else
+          return "FALSE";
+     end
+end

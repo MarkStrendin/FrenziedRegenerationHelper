@@ -1,11 +1,4 @@
 
-local function boolToString(val)
-     if (val == true) then
-          return "TRUE";
-     else
-          return "FALSE";
-     end
-end
 
 local function chkOnChange(self)
      -- Use this callback to run another callback, passed as a parameter initially
@@ -32,10 +25,43 @@ local function placeCheckBox(parent, xpos, ypos, checkboxName, in_value, out_cal
      checkbox.tooltipRequirement = checkboxtooltip;
 end
 
+
 local function populate_options_panel(parent)
-     placeCheckBox(parent, 20, 70, "showDebugMessages", FRHelperOptions_Get_ShowDebugMessages() , FRHelperOptions_Set_ShowDebugMessages, "Show Debug Messages", "Show extra debug messages in chat window");
-     placeCheckBox(parent, 20, 100, "hideOutsideBearForm", FRHelperOptions_Get_HideOutsideBearForm() , FRHelperOptions_Set_HideOutsideBearForm, "Only show when in bear form", "Hides the number frame if you are not in bear form.");
-     placeCheckBox(parent, 20, 130, "showDamageType",  FRHelperOptions_Get_ShowDamageTypeBar() , FRHelperOptions_Set_ShowDamageTypeBar, "Show damage type indicator", "Show a colored bar along the bottom of the frame to indicate how much of the damage taken was physical or magical.");
+     local checkBoxes = {
+          {
+               ["name"] = "hideOutsideBearForm",
+               ["value"] = FRHelperOptions_Get_HideOutsideBearForm(),
+               ["callback"] = FRHelperOptions_Set_HideOutsideBearForm,
+               ["title"] = "Only show when in bear form",
+               ["description"] = "Hides the number frame if you are not in bear form."
+          },
+          {
+               ["name"] = "showDamageType",
+               ["value"] = FRHelperOptions_Get_ShowDamageTypeBar(),
+               ["callback"] = FRHelperOptions_Set_ShowDamageTypeBar,
+               ["title"] = "Show damage type indicator",
+               ["description"] = "Show a colored bar along the bottom of the frame to indicate how much of the damage taken was physical or magical."
+          },
+          {
+               ["name"] = "showDebugMessages",
+               ["value"] = FRHelperOptions_Get_ShowDebugMessages(),
+               ["callback"] = FRHelperOptions_Set_ShowDebugMessages,
+               ["title"] = "Show Debug Messages",
+               ["description"] = "Show extra debug messages in chat window"
+          },
+     }
+
+     local controls_x =  20;
+     local controls_y_start = 70;
+     local controls_y_spacing = 40;
+
+     local current_y = controls_y_start;
+
+     for x = 1, #checkBoxes, 1 do
+          checkbox = checkBoxes[x];
+          placeCheckBox(parent, controls_x, current_y, checkbox.name, checkbox.value , checkbox.callback, checkbox.title, checkbox.description);
+          current_y = current_y + controls_y_spacing;
+     end
 end
 
 function FRHelper_initOptionsPanel()

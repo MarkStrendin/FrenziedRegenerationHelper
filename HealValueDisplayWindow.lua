@@ -91,6 +91,7 @@ function HealValueDisplayWindow_Init()
 	FrenziedRegenerationHelper_HealValueWindow:SetScript("OnDragStop", function(self)
 			self:StopMovingOrSizing();
 			end);
+	FrenziedRegenerationHelper_HealValueWindow:Hide();
 
 	-- Physical/Magic window (experimental)
 	DamageTypeWindow = CreateFrame("StatusBar", "damageTypeFrame", FrenziedRegenerationHelper_HealValueWindow);
@@ -105,20 +106,7 @@ function HealValueDisplayWindow_Init()
 	DamageTypeWindow:SetBackdrop({bgFile=[[Interface\ChatFrame\ChatFrameBackground]],edgeFile=[[Interface/Tooltips/UI-Tooltip-Border]],tile=true,tileSize=4,edgeSize=1,insets={left=0,right=0,top=0,bottom=0}});
 	DamageTypeWindow:SetStatusBarColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim));
 	DamageTypeWindow:SetBackdropColor(FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim), FRHelper_ConvertRGBToDecimal(FRHelperStatic.color_damagetype_dim));
-
-	if (FRHelperOptions_Get_ShowDamageTypeBar() == true) then
-		DamageTypeWindow:Show();
-	else
-		DamageTypeWindow:Hide();
-	end
-
-	if (FRHelperOptions_Get_HideOutsideBearForm()) then
-		HealValueDisplayWindow_Hide();
-
-		if (GetShapeshiftForm() == FRHelperStatic.bearFormID) then
-			HealValueDisplayWindow_Show();
-		end
-	end
+	DamageTypeWindow:Hide();
 end
 
 -- ----------------------------------------------
@@ -143,6 +131,10 @@ end
 
 local function GetAdjustedFRHealingAmount(baseAmount)
 	return (baseAmount * (1 + FRHelperOptions_Get_WildFleshBonus() + GetGuardianOfEluneBonus())) + GetSkysecsHoldBonus();
+end
+
+function HealValueDisplayWindow_ResetPosition()
+	FrenziedRegenerationHelper_HealValueWindow:SetPoint("CENTER", 0, 0);
 end
 
 function HealValueDisplayWindow_Update()

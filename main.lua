@@ -114,7 +114,6 @@ local function InitializeAddon()
 	FRHelper_InitSavedVariables();
 	FRH_DamageTracking_InitializeDamageTable();
 	HealValueDisplayWindow_Init();
-	FRHelper_initOptionsPanel();
 	FRH_HealValueDisplayWindow_CheckIfWindowShouldBeShown();
 	FRHelper_ShowMessage("Version "..FRHelperStatic.addonVersion.." loaded - Window will appear in bear form.");
 end
@@ -130,7 +129,6 @@ local function onFrameUpdate(self, elapsed)
 	totalElapsedSeconds = totalElapsedSeconds + elapsed
 	if (totalElapsedSeconds >= 1) then
 		totalElapsedSeconds = 0
-
 		if (isMainAddonFrameInitialized == true) then
 			-- Stuff to run every second goes here
 			CalculateWildFleshBonus();
