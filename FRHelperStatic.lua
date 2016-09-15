@@ -43,3 +43,13 @@ FRHelperStatic.color_damagetype_magical_b = 220;
 
 -- What color to dim the bar to if theres no damage to display
 FRHelperStatic.color_damagetype_dim = 64;
+
+
+-- Cyan rgb(86, 165, 220)
+FRHelperStatic.color_damagehealthbar_r = 0;
+FRHelperStatic.color_damagehealthbar_g = 255;
+FRHelperStatic.color_damagehealthbar_b = 0;
+
+FRHelperStatic.color_damagehealthbar_bg_r = 0;
+FRHelperStatic.color_damagehealthbar_bg_g = 64;
+FRHelperStatic.color_damagehealthbar_bg_b = 0;

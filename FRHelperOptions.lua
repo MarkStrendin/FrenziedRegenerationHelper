@@ -9,10 +9,17 @@ local FRHelperOptions = {};
 
 function FRHelper_InitSavedVariables()
 	local defaults = {
-		showDebugMessages = false,
 		hideOutsideBearForm = true,
 		showDamageType = true,
-		bonusHealing_WildFlesh = 0
+		showDebugMessages = false,
+		bonusHealing_WildFlesh = 0,
+		healframe_width = 200,
+		healframe_height = 25,
+		displayValueAsPercents = false,
+		displayValueAsBar = false,
+		damageTypeBarHeight = 2,
+		hideHealValueText = false,
+		healframe_background_alpha = 0.5
 	}
 
 	-- If there are no saved variables at all, set all to defaults
@@ -58,9 +65,34 @@ function FRHelperOptions_Get_ShowDamageTypeBar()
 	return FRHelperOptions.showDamageType;
 end
 
-function FRHelperOptions_GetOptionsStruct()
-	return FRHelperOptions;
+function FRHelperOptions_Get_HealFrameWidth()
+	return FRHelperOptions.healframe_width;
 end
+
+function FRHelperOptions_Get_HealFrameHeight()
+	return FRHelperOptions.healframe_height;
+end
+
+function FRHelperOptions_Get_DisplayValueAsPercent()
+	return FRHelperOptions.displayValueAsPercents;
+end
+
+function FRHelperOptions_Get_DisplayValueAsBar()
+	return FRHelperOptions.displayValueAsBar;
+end
+
+function FRHelperOptions_Get_HideHealValueText()
+	return FRHelperOptions.hideHealValueText;
+end
+
+function FRHelperOptions_Get_DamageTypeBarHeight()
+	return FRHelperOptions.damageTypeBarHeight;
+end
+
+function FRHelperOptions_Get_HealFrameBGAlpha()
+	return FRHelperOptions.healframe_background_alpha;
+end
+
 
 -- ----------------------------------------------
 -- Setters
@@ -90,4 +122,32 @@ end
 
 function FRHelperOptions_Set_ShowDamageTypeBar(v)
 	FRHelperOptions.showDamageType = FRHelper_ParseBool(v);
+end
+
+function FRHelperOptions_Set_HealFrameWidth(val)
+	FRHelperOptions.healframe_width = val;
+end
+
+function FRHelperOptions_Set_HealFrameHeight(val)
+	FRHelperOptions.healframe_height = val;
+end
+
+function FRHelperOptions_Set_DisplayValueAsPercent(val)
+	FRHelperOptions.displayValueAsPercents = FRHelper_ParseBool(val);
+end
+
+function FRHelperOptions_Set_DisplayValueAsBar(val)
+	FRHelperOptions.displayValueAsBar = FRHelper_ParseBool(val);
+end
+
+function FRHelperOptions_Set_HideHealValueText(val)
+	FRHelperOptions.hideHealValueText = FRHelper_ParseBool(val);
+end
+
+function FRHelperOptions_Set_DamageTypeBarHeight(val)
+	FRHelperOptions.damageTypeBarHeight = tonumber(val);
+end
+
+function FRHelperOptions_Set_HealFrameBGAlpha(val)
+	FRHelperOptions.healframe_background_alpha = tonumber(val);
 end
