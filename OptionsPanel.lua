@@ -157,16 +157,6 @@ local function populate_options_panel(parent)
           placeSlider(parent, controls_x + 275, current_y, slider.name, 275, slider.minvalue, slider.maxvalue, slider.step, slider.value, slider.callback, slider.title)
           current_y = current_y + slider_spacing;
      end
-
-     -- Create a test button in the bottom right corner
-     local testButton = CreateFrame("Button", "btnTest", parent, "UIPanelButtonTemplate ");
-     testButton:ClearAllPoints();
-     testButton:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", -20, 20);
-     testButton:SetScript("OnClick", HealValueDisplayWindow_UpdateSize)
-     testButton:SetWidth(100);
-     testButton:SetText("Test button");
-
-
 end
 
 function FRHelper_windowWidthSliderCallback(sender)
