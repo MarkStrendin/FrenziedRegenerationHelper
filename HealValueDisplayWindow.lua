@@ -221,7 +221,7 @@ local function GetClawsOfUrsocBonus()
 end
 
 local function GetAdjustedFRHealingAmount(baseAmount)
-	return (baseAmount * (1 + GetGuardianOfEluneBonus())) + GetSkysecsHoldBonus();
+	return (baseAmount * (1 + GetGuardianOfEluneBonus() + GetClawsOfUrsocBonus() + GetSkysecsHoldBonus()));
 end
 
 function HealValueDisplayWindow_SetWidth(newWidth_raw)

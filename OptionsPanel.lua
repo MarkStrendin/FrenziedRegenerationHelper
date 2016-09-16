@@ -1,15 +1,14 @@
 
 
-local function checkboxCallbackHandler(self)
+local function checkboxCallbackHandler(sender)
      -- Use this callback to run another callback, passed as a parameter initially
-     if (self:GetChecked() == nil) then
+     if (sender:GetChecked() == nil) then
      else
-          self.callback_setter(self:GetChecked());
+          sender.callback_setter(sender:GetChecked());
      end
 
      FRH_HealValueDisplayWindow_CheckIfWindowShouldBeShown();
 end
-
 
 local function placeCheckBox(parent, xpos, ypos, checkboxName, in_value, out_callback, checkboxlabel, checkboxtooltip)
      local checkbox = CreateFrame("CheckButton", "chk"..checkboxName, parent, "InterfaceOptionsCheckButtonTemplate");
@@ -26,14 +25,25 @@ local function placeCheckBox(parent, xpos, ypos, checkboxName, in_value, out_cal
      checkbox.tooltipRequirement = checkboxtooltip;
 end
 
-local function placeSlider(parent, xpos, ypos, name, width, minvalue, maxvalue, step, in_value, out_callback, label)
+local function sliderCallbackHandler(sender)
+     -- Workaround for slider's SetValueStep not working anymore
+     -- We feed a rounded value back into it
+     sender:SetValue(string.format("%.0f", sender:GetValue()));
+     sender.valueText:SetText(sender:GetValue());
+     sender.callback_setter(sender);
+end
+
+local function placeSlider(parent, xpos, ypos, name, minvalue, maxvalue, in_value, out_callback, label)
+
+     local sliderWidth = 300;
+
      local newSlider = CreateFrame("Slider", "sld"..name, parent, "OptionsSliderTemplate");
-     newSlider:SetWidth(width);
+     newSlider:SetWidth(sliderWidth);
      newSlider:SetMinMaxValues(minvalue,maxvalue);
-     newSlider:SetValueStep(step);
      newSlider:SetValue(in_value);
      newSlider:SetPoint("TOPLEFT", xpos, ypos * -1, "TOPLEFT");
-	newSlider:SetScript('OnValueChanged', out_callback)
+     --newSlider:SetValueStep(1); -- SetValueStep is currently bugged (since Patch 5.4.0), and doesn't do anything
+	newSlider:SetScript('OnValueChanged', sliderCallbackHandler);
      newSlider.callback_setter = out_callback;
 
      _G[newSlider:GetName() .. 'Text']:SetText(label)
@@ -41,6 +51,32 @@ local function placeSlider(parent, xpos, ypos, name, width, minvalue, maxvalue, 
 	_G[newSlider:GetName() .. 'Low']:SetText(minvalue)
 	_G[newSlider:GetName() .. 'High']:SetText(maxvalue);
      newSlider:Show();
+
+     -- Also place a text box
+     --local textBoxWidth = 75;
+     --local newSliderEditBox = CreateFrame("EditBox", "txt"..name, parent, "InputBoxTemplate");
+     --newSliderEditBox:SetAutoFocus(false);
+     --newSliderEditBox:SetWidth(textBoxWidth);
+     --newSliderEditBox:SetHeight(15);
+     --newSliderEditBox:SetPoint("TOPRIGHT", newSlider, "TOPRIGHT", textBoxWidth + 20, 0);
+     --newSliderEditBox:SetText(tonumber(string.format("%.3f", in_value)));
+     --newSliderEditBox:SetNumeric(true);
+
+     local valueText = newSlider:CreateFontString(nil, 'BACKGROUND', "GameFontHighlightSmall");
+     valueText:SetJustifyH("RIGHT");
+     valueText:SetPoint("BOTTOMRIGHT", newSlider, "TOPRIGHT");
+     valueText:SetText(in_value);
+     newSlider.valueText = valueText;
+
+     newSlider.textBox = newSliderEditBox;
+end
+
+local function GetClawsOfUrsocBonus()
+	if (IsEquippedItem("Claws of Ursoc") == true) then
+		return (FRHelperOptions_Get_WildFleshBonus() * 100);
+	else
+		return 0;
+	end
 end
 
 local function populate_options_panel(parent)
@@ -102,18 +138,16 @@ local function populate_options_panel(parent)
                ["value"] = FRHelperOptions_Get_HealFrameWidth(),
                ["callback"] = FRHelper_windowWidthSliderCallback,
                ["title"] = "Frame width",
-               ["minvalue"] = 10,
-               ["maxvalue"] = 1000,
-               ["step"] = 1,
+               ["minvalue"] = 30,
+               ["maxvalue"] = 500,
           },
           {
                ["name"] = "frameHeight",
                ["value"] = FRHelperOptions_Get_HealFrameHeight(),
                ["callback"] = FRHelper_windowHeightSliderCallback,
                ["title"] = "Frame height",
-               ["minvalue"] = 3,
-               ["maxvalue"] = 500,
-               ["step"] = 1,
+               ["minvalue"] = 20,
+               ["maxvalue"] = 200,
           },
           {
                ["name"] = "damageTypeBarHeight",
@@ -121,8 +155,7 @@ local function populate_options_panel(parent)
                ["callback"] = FRHelper_DamageTypeBarHeightSliderCallback,
                ["title"] = "Damage type bar height",
                ["minvalue"] = 1,
-               ["maxvalue"] = 500,
-               ["step"] = 1,
+               ["maxvalue"] = 200
           },
           {
                ["name"] = "frameAlpha",
@@ -130,8 +163,7 @@ local function populate_options_panel(parent)
                ["callback"] = FRHelper_HealFrameOpacitySlidercallback,
                ["title"] = "Frame background opacity",
                ["minvalue"] = 0,
-               ["maxvalue"] = 1,
-               ["step"] = 0.1,
+               ["maxvalue"] = 100
           },
      }
      --slider.name, width, slider.minvalue, slider.maxvalue, slider.step, slider.value, slider.callback, slider.title
@@ -154,9 +186,22 @@ local function populate_options_panel(parent)
      current_y = controls_y_start;
      for x = 1, #sliders, 1 do
           slider = sliders[x];
-          placeSlider(parent, controls_x + 275, current_y, slider.name, 275, slider.minvalue, slider.maxvalue, slider.step, slider.value, slider.callback, slider.title)
+          placeSlider(parent, controls_x + 275, current_y, slider.name, slider.minvalue, slider.maxvalue, slider.value, slider.callback, slider.title)
           current_y = current_y + slider_spacing;
      end
+
+     -- Add a blurb about wildflesh and display the current known bonus from it
+     local lblWildFleshBonus = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormalLarge');
+     lblWildFleshBonus:SetJustifyV('TOP');
+     lblWildFleshBonus:SetJustifyH('LEFT');
+     lblWildFleshBonus:SetPoint('BOTTOMLEFT', 16, 36);
+     lblWildFleshBonus:SetText("Current known bonus from Claws of Ursoc: "..GetClawsOfUrsocBonus().."%");
+
+     local lblWildFleshBlurb = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormal');
+     lblWildFleshBlurb:SetJustifyV('TOP');
+     lblWildFleshBlurb:SetJustifyH('LEFT');
+     lblWildFleshBlurb:SetPoint('BOTTOMLEFT', 16, 16);
+     lblWildFleshBlurb:SetText("Claws of Ursoc bonus is updated automatically when you open it's talent tree.");
 end
 
 function FRHelper_windowWidthSliderCallback(sender)
@@ -190,7 +235,8 @@ function FRHelper_DamageTypeBarHeightSliderCallback(sender)
 end
 
 function FRHelper_HealFrameOpacitySlidercallback(sender)
-     local newAlpha = sender:GetValue();
+     local newAlpha = sender:GetValue() / 100;
+
 	if (newAlpha ~= nil) then
 		if ((newAlpha > 0) and (newAlpha < 1)) then
                HealValueDisplayWindow_SetBGAlpha(newAlpha);
