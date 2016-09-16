@@ -115,6 +115,7 @@ local function InitializeAddon()
 	FRH_DamageTracking_InitializeDamageTable();
 	HealValueDisplayWindow_Init();
 	FRH_HealValueDisplayWindow_CheckIfWindowShouldBeShown();
+	FRH_UpdateOptionsMenuValues();
 	FRHelper_ShowMessage("Version "..FRHelperStatic.addonVersion.." loaded - Window will appear in bear form.");
 end
 

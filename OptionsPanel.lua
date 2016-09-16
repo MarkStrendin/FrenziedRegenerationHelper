@@ -71,14 +71,6 @@ local function placeSlider(parent, xpos, ypos, name, minvalue, maxvalue, in_valu
      newSlider.textBox = newSliderEditBox;
 end
 
-local function GetClawsOfUrsocBonus()
-	if (IsEquippedItem("Claws of Ursoc") == true) then
-		return (FRHelperOptions_Get_WildFleshBonus() * 100);
-	else
-		return 0;
-	end
-end
-
 local function populate_options_panel(parent)
 
      -- This could be expanded to include things that aren't just checkboxes, if we include a variable to indicate what kind of control it should be
@@ -195,7 +187,7 @@ local function populate_options_panel(parent)
      lblWildFleshBonus:SetJustifyV('TOP');
      lblWildFleshBonus:SetJustifyH('LEFT');
      lblWildFleshBonus:SetPoint('BOTTOMLEFT', 16, 36);
-     lblWildFleshBonus:SetText("Current known bonus from Claws of Ursoc: "..GetClawsOfUrsocBonus().."%");
+     --lblWildFleshBonus:SetText("Current known bonus from Claws of Ursoc: "..FRHelperOptions_Get_WildFleshBonus().."%");
 
      local lblWildFleshBlurb = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormal');
      lblWildFleshBlurb:SetJustifyV('TOP');
@@ -205,7 +197,7 @@ local function populate_options_panel(parent)
 end
 
 function FRH_UpdateOptionsMenuValues()
-     lblWildFleshBonus:SetText("Current known bonus from Claws of Ursoc: "..GetClawsOfUrsocBonus().."%");
+     lblWildFleshBonus:SetText("Current known bonus from Claws of Ursoc: "..(FRHelperOptions_Get_WildFleshBonus() * 100).."%");
 end
 
 function FRHelper_windowWidthSliderCallback(sender)
