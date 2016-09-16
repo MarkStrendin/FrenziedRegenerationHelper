@@ -103,6 +103,7 @@ function FRHelperOptions_Set_WildFleshBonus(bonus)
 	if (tostring(bonus) ~= tostring(FRHelperOptions.bonusHealing_WildFlesh)) then
 		FRHelper_ShowMessage("Updating known bonus from Claws of Ursoc to "..(bonus*100).."% (was "..(FRHelperOptions.bonusHealing_WildFlesh*100).."%)")
 		FRHelperOptions.bonusHealing_WildFlesh = bonus
+		FRH_UpdateOptionsMenuValues();
 	end
 end
 

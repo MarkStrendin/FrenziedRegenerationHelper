@@ -191,7 +191,7 @@ local function populate_options_panel(parent)
      end
 
      -- Add a blurb about wildflesh and display the current known bonus from it
-     local lblWildFleshBonus = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormalLarge');
+     lblWildFleshBonus = parent:CreateFontString(nil, 'ARTWORK', 'GameFontNormalLarge');
      lblWildFleshBonus:SetJustifyV('TOP');
      lblWildFleshBonus:SetJustifyH('LEFT');
      lblWildFleshBonus:SetPoint('BOTTOMLEFT', 16, 36);
@@ -202,6 +202,10 @@ local function populate_options_panel(parent)
      lblWildFleshBlurb:SetJustifyH('LEFT');
      lblWildFleshBlurb:SetPoint('BOTTOMLEFT', 16, 16);
      lblWildFleshBlurb:SetText("Claws of Ursoc bonus is updated automatically when you open it's talent tree.");
+end
+
+function FRH_UpdateOptionsMenuValues()
+     lblWildFleshBonus:SetText("Current known bonus from Claws of Ursoc: "..GetClawsOfUrsocBonus().."%");
 end
 
 function FRHelper_windowWidthSliderCallback(sender)
