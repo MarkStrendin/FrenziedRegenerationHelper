@@ -139,7 +139,9 @@ function HealValueDisplayWindow_Init()
 	FrenziedRegenerationHelper_HealValueWindow:EnableMouse(true);
 	FrenziedRegenerationHelper_HealValueWindow:RegisterForDrag("LeftButton");
 	FrenziedRegenerationHelper_HealValueWindow:SetScript("OnDragStart", function(self)
-			self:StartMoving();
+			if (FRHelperOptions_Get_FramePositionLocked() == false) then
+				self:StartMoving();
+			end
 			end);
 	FrenziedRegenerationHelper_HealValueWindow:SetScript("OnDragStop", function(self)
 			self:StopMovingOrSizing();
@@ -204,6 +206,7 @@ local function GetGuardianOfEluneBonus()
 	end
 end
 
+-- This isn't a multiplier bonus like the others, its an additional 12% of the player's max health
 local function GetSkysecsHoldBonus()
 	if (IsEquippedItem("Skysec's Hold") == true) then
 		return UnitHealthMax("player") * 0.15;
@@ -221,7 +224,7 @@ local function GetClawsOfUrsocBonus()
 end
 
 local function GetAdjustedFRHealingAmount(baseAmount)
-	return (baseAmount * (1 + GetGuardianOfEluneBonus() + GetClawsOfUrsocBonus() + GetSkysecsHoldBonus()));
+	return (baseAmount * (1 + GetGuardianOfEluneBonus() + GetClawsOfUrsocBonus()) + GetSkysecsHoldBonus());
 end
 
 function HealValueDisplayWindow_SetWidth(newWidth_raw)

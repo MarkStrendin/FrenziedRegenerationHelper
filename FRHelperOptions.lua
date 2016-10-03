@@ -19,7 +19,9 @@ function FRHelper_InitSavedVariables()
 		displayValueAsBar = false,
 		damageTypeBarHeight = 2,
 		hideHealValueText = false,
-		healframe_background_alpha = 0.5
+		healframe_background_alpha = 0.5,
+		framePositionLocked = false,
+		hideOutsideCombat = false
 	}
 
 	-- If there are no saved variables at all, set all to defaults
@@ -93,6 +95,14 @@ function FRHelperOptions_Get_HealFrameBGAlpha()
 	return FRHelperOptions.healframe_background_alpha;
 end
 
+function FRHelperOptions_Get_FramePositionLocked()
+	return FRHelperOptions.framePositionLocked;
+end
+
+function FRHelperOptions_Get_HideOutsideCombat()
+	return FRHelperOptions.hideOutsideCombat;
+end
+
 
 -- ----------------------------------------------
 -- Setters
@@ -151,4 +161,17 @@ end
 
 function FRHelperOptions_Set_HealFrameBGAlpha(val)
 	FRHelperOptions.healframe_background_alpha = tonumber(val);
+end
+
+function FRHelperOptions_Set_FramePositionLocked(val)
+	if (FRHelper_ParseBool(val) == true) then
+		FRHelper_ShowMessage("Window is now locked")
+	else
+		FRHelper_ShowMessage("Window is now unlocked and movable")
+	end
+	FRHelperOptions.framePositionLocked = FRHelper_ParseBool(val);
+end
+
+function FRHelperOptions_Set_HideOutsideCombat(val)
+	FRHelperOptions.hideOutsideCombat = FRHelper_ParseBool(val);
 end

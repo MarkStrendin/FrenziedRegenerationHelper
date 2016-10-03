@@ -123,6 +123,13 @@ local function populate_options_panel(parent)
                ["title"] = "Show Debug Messages",
                ["description"] = "Show extra debug messages in chat window"
           },
+          {
+               ["name"] = "lockFrame",
+               ["value"] = FRHelperOptions_Get_FramePositionLocked(),
+               ["callback"] = FRHelperOptions_Set_FramePositionLocked,
+               ["title"] = "Lock window position",
+               ["description"] = "Prevent the window from being moved"
+          },
      }
      local sliders = {
           {
