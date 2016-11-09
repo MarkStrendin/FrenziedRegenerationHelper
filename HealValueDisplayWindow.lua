@@ -206,9 +206,15 @@ local function GetGuardianOfEluneBonus()
 	end
 end
 
--- This isn't a multiplier bonus like the others, its an additional 12% of the player's max health
-local function GetSkysecsHoldBonus()
-	return 0; -- This needs to be fixed - not supporting it is probably better than showing numbers that are not accurate
+-- This needs to be fixed - not supporting it is probably better than showing numbers that are not accurate
+-- Frenzied Regeneration heals you for an additional 12% of your maximum health over 3 sec.
+-- Grants a buff called: Skysec's Hold / http://www.wowhead.com/spell=208218/skysecs-hold
+local function AdjustForSkysecsHold(base)
+	if (UnitBuff("player", "Skysec's Hold") ~= nil) then
+		return base + UnitHealthMax("player") * 0.12;
+	else
+		return base;
+	end
 end
 
 local function GetClawsOfUrsocBonus()
@@ -219,8 +225,47 @@ local function GetClawsOfUrsocBonus()
 	end
 end
 
+-- ----------------------------------------------
+-- General bonuses to healing
+-- ----------------------------------------------
+
+--Calls upon a guardian spirit to watch over the friendly target. The spirit increases the healing received by the target by 40%, and also prevents the target from dying by sacrificing itself.  This sacrifice terminates the effect but heals the target of 50% of their maximum health. Lasts 10 sec.
+local function AdjustForGuardianSpiritBonus(base)
+	if (UnitBuff("player", "Guardian Spirit") ~= nil) then
+		return base * 1.4;
+	else
+		return base;
+	end
+end
+
+--Encases the target in a cocoon of Chi energy for 12 sec, absorbing [(((Spell power * 31.164) + 0)) * (1 + $versadmg)] damage and increasing all healing over time received by 50%.
+local function AdjustForLifeCocoonBonus(base)
+	if (UnitBuff("player", "Life Cocoon") ~= nil) then
+		return base * 1.5;
+	else
+		return base;
+	end
+end
+
+--Heals all party or raid members within 40 yards for [5 * (144% of Spell power)] over 8 sec, and increases healing done to them by 10% for 8 sec. Healing increased by 100% when not in a raid.
+local function AdjustForDivineHymnBonus(base)
+	if (UnitBuff("player", "Divine Hymn") ~= nil) then
+		if (IsInRaid()) then
+			return base * 1.1;
+		else
+			return base * 2;
+		end
+	else
+		return base;
+	end
+end
+
+local function GetTotalMultiplierBonus()
+	return (1 + GetGuardianOfEluneBonus() + GetClawsOfUrsocBonus());
+end
+
 local function GetAdjustedFRHealingAmount(baseAmount)
-	return (baseAmount * (1 + GetGuardianOfEluneBonus() + GetClawsOfUrsocBonus()) + GetSkysecsHoldBonus());
+	return AdjustForGuardianSpiritBonus(AdjustForLifeCocoonBonus(AdjustForDivineHymnBonus(AdjustForSkysecsHold(baseAmount * (GetTotalMultiplierBonus())))));
 end
 
 function HealValueDisplayWindow_SetWidth(newWidth_raw)
