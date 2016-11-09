@@ -208,11 +208,7 @@ end
 
 -- This isn't a multiplier bonus like the others, its an additional 12% of the player's max health
 local function GetSkysecsHoldBonus()
-	if (IsEquippedItem("Skysec's Hold") == true) then
-		return UnitHealthMax("player") * 0.15;
-	else
-		return 0;
-	end
+	return 0; -- This needs to be fixed - not supporting it is probably better than showing numbers that are not accurate
 end
 
 local function GetClawsOfUrsocBonus()
