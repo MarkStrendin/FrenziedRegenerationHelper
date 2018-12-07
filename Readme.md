@@ -1,4 +1,7 @@
 # FrenziedRegenerationHelper
+## Note regarding future development of this addon
+Since World of Warcraft patch 8.0.1, Frenzied Regeneration no longer works this way, and so this addon is no longer useful (and very likely will not even work). Since it's no longer useful, I will no longer be updating it. Should Frenzied Regeneration's mechanics return to this one day, I will resume development.
+
 ## What is this?
 
 FrenziedRegenerationHelper is a small UI addon for World of Warcraft, which displays approximately how much health Frenzied Regeneration will heal for.
@@ -15,16 +18,6 @@ If you've downloaded the zip file from Curse, installating should be as easy as 
 
 ### Downloaded from bitbucket
 If you've downloaded this from bitbucket, you can unpack the zip file  directly into your addons directory as well, but you must rename the folder that it creates to "FrenziedRegenerationHelper", or it will not work (WOW addon folder names must match the name of the .toc file).
-
-## Official repositories
-
-The official source code repository for this addon is here:
-https://bitbucket.org/markstrendin/frenziedregenerationhelper
-
-I have posted this addon on Curse here: https://mods.curse.com/addons/wow/frenziedregenerationhelper 
-and on CurseForge here: https://wow.curseforge.com/addons/frenziedregenerationhelper/
-
-All other distributions are outside of my control, and I'm unable to support them.
 
 ## License
 
